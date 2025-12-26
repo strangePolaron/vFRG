@@ -186,6 +186,11 @@ class QuantumAction:
     def isKTstart(self):
         return (self.healLength()<=((2.*np.pi)/self.k))
 
+    def meanfieldCrit(self):
+        myKval = self.lutK()
+        return myKval<(np.pi/2.)
+
+
 class BECterminFunc:
     def __init__(self, m, beta, rhoidx, allidx):
         self.terminal = True

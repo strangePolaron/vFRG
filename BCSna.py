@@ -115,6 +115,8 @@ class BCSAction:
     def FinalRhoSF(self):
         if self.becShift :
             if self.solBEC.status==0:
+                #self.ydata.update(self.solBEC.y[:,-1])
+                #if self.becBos.meanfieldCrit():
                 return float(self.solBEC.y[self.becallidx, -1])  #/np.sqrt(self.solBEC.y[self.becvkidx, -1]))
         return float(0.)
 
