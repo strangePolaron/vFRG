@@ -16,10 +16,10 @@ from multiprocessing import Pool
 import tqdm
 import pickle
 
-kF=2.
+kF=1.
 mf = 1.
 
-def rhoSF(parpair, targetNum=(kF**2)/(2. * np.pi), cutoff=20., mass=mf):
+def rhoSF(parpair, targetNum=(kF**2)/(2. * np.pi), cutoff=50., mass=mf):
     eb, beta = parpair
     #print(f"eb,\t{eb:.2f},\tbeta,\t{beta:.2f}")
     mu = bcs.findMu(targetNum, eb, beta, cutoff, mass)
@@ -61,9 +61,9 @@ def becbcsSeparate(parpair, targetNum=(kF**2)/(2. * np.pi), cutoff=20., mass=mf)
 
 #rhoSF((2.75, 800))
 #"""
-eblst = np.arange(0.1, 10., 0.1) * ((kF**2)/(2.*mf))
+eblst = np.arange(0.1, 10., 0.2) * ((kF**2)/(2.*mf))
 #betalst = 1. / np.arange(1./10000., 1./400., 1./10000.)
-betalst = 1. / np.arange(1./10000., 10./100., 1./1000.) / ((kF**2)/(2.*mf))
+betalst = 1. / np.arange(1./10000., 20./100., 2./1000.) / ((kF**2)/(2.*mf))
 betaMulst = 1. / np.arange(1./200000., 5./10000., 2./10000.)
 
 
@@ -84,19 +84,20 @@ print(oriMu_shape)
 
 
 if __name__=="__main__":
-    """
     with Pool(12) as p:
         rhoi = list(tqdm.tqdm(p.imap_unordered(rhoSF, parLst), total=totLen))
     rhogrid = np.array(rhoi).reshape(ori_shape)
 
     dat = {"rhosf":rhogrid, "eb":ebgrid.reshape(ori_shape), "Tc":(1./(betagrid.reshape(ori_shape)))}
     try:
-        with open("Results/bcs-effixed.pickle", "wb") as f:
+        with open("Results/bcs-effixed-KToff.pickle", "wb") as f:
             pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
     except Exception as ex:
         print("Error during pickling object (Possibly unsupported):", ex)
-    with open("Results/bcs-effixed.pickle", "rb") as f:
+    """
+    with open("Results/bcs-effixed-KToff.pickle", "rb") as f:
         dat = pickle.load(f)
+    """
     rhogrid = dat["rhosf"]
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 20
@@ -109,7 +110,7 @@ if __name__=="__main__":
     ax.set_ylabel("$k_B T/E_F$")
     ax.set_title("$A_{l,k}=\\rho_s/\\rho_{0,k}$")
     plt.show()
-    """
+    #"""
 
 
     """
@@ -140,7 +141,7 @@ if __name__=="__main__":
     """
 
 
-    #"""
+    """
     with Pool(12) as p:
         becbcsi = list(tqdm.tqdm(p.imap_unordered(becbcsSeparate, parLst), total=totLen))
     becbcsgrid = np.array(becbcsi).reshape(ori_shape)
@@ -159,4 +160,4 @@ if __name__=="__main__":
     ax.set_ylabel("$k_B T/E_F$")
     #ax.set_title("$A_{l,k}=\\rho_s/\\rho_{0,k}$")
     plt.show()
-    #"""
+    """

@@ -19,7 +19,7 @@ import scipy.optimize as optm
 bareInt = lambda eb, m, cutoff: 1. / ((m/(2.*np.pi))*(np.log(np.sqrt(m * eb)/np.sqrt(pow(cutoff, 2) + m * eb))))
 
 class BCSAction:
-    def __init__(self, eb0, beta, mu, cutoff, mf=1., h=20.):
+    def __init__(self, eb0, beta, mu, cutoff, mf=1., h=10.):
         self.efSwitch = False
         self.KTswitch = True
 
@@ -115,6 +115,8 @@ class BCSAction:
     def FinalRhoSF(self):
         if self.becShift :
             if self.solBEC.status==0:
+                #self.ydata.update(self.solBEC.y[:,-1])
+                #if self.becBos.meanfieldCrit():
                 return float(self.solBEC.y[self.becallidx, -1])  #/np.sqrt(self.solBEC.y[self.becvkidx, -1]))
         return float(0.)
 
