@@ -1,5 +1,5 @@
 # Vortices Functional Renormalization Group 
-An FRG project focusing on 2D bosons which provides a unified method dealing the BKT physics.
+An FRG project focusing on 2D bosons which provides a unified method dealing with the BKT physics.
 ### Installation
 This project is organized by [uv](https://github.com/astral-sh/uv). 
 
