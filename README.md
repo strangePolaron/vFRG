@@ -10,6 +10,7 @@ An FRG project focusing on 2D bosons which provides a unified method dealing wit
 - [Architecture](#architecture)
 - [Module Map](#module-map)
 - [RGState: Shared Data Backbone](#rgstate-shared-data-backbone)
+- [Adding a New Coupling](#adding-a-new-coupling)
 - [BCS Track Workflow](#bcs-track-workflow)
 - [BEC Track Workflow](#bec-track-workflow)
 - [Subsystem Roles](#subsystem-roles)
@@ -173,6 +174,110 @@ RGState
    ```
 
 **Critical rule:** Two states with identical `_data` but different `_keys_upd` order must produce the same physics when merged.
+
+---
+
+## Adding a New Coupling
+
+When extending the FRG flow with a new coupling variable, **do not start with `keys.py`**. The `Key` enum is a label for orchestrator indexing; the coupling enters the flow when a subsystem registers it in `RGState`.
+
+### Pipeline
+
+```
+ 1. Physics          Decide which sector owns ∂(newkey)/∂l
+        │
+        ▼
+ 2. Register         ydatakeysPrompt + dataAppend(...) in that subsystem
+        │
+        ▼
+ 3. Flow equation    dylst(l, dy) → dy.data["newkey"] = ...
+        │
+        ▼
+ 4. keys.py          Add Key enum entry (only if orchestrator/events need it)
+        │
+        ▼
+ 5. Orchestrator     bcs_action.py / bec_action.py merge, observables, events
+        │
+        ▼
+ 6. Tests            pytest regression + state merge if cross-subsystem
+```
+
+**Rule of thumb:** `keys.py` labels a drawer; the drawer is created in the subsystem's `dataAppend`.
+
+### Subsystem ownership
+
+| Subsystem | Module | Typical couplings |
+|-----------|--------|-------------------|
+| Fermion (outer BCS) | `bcs/fermion.py` | `eb`, `ef`, `g`, `h`, `dfac`, `rhoF` |
+| Thermal boson | `bcs/thermal.py` | `g`, `eb`, `nthrm` |
+| Quantum BEC | `bcs/quantum.py` | `g`, `rho`, `avv`, `all` |
+| KT vortex sector | `bcs/kt.py` | `lutK`, `g1`, `g2`, … |
+
+Quantum-sector flow equations are typically derived in `mfPopov.nb` (mean-field + Popov counterterms) and ported to `bcs/quantum.py`.
+
+### BCS-track registration order
+
+Subsystems construct in fixed order inside `BCSAction.__init__`:
+
+```
+OuterBCSFermion  →  registers eb, ef, g, h, dfac, rhoF
+ThermalBoson     →  appends g, eb, nthrm  (shared keys update in place)
+QuantumAction    →  appends g, rho, avv, all  (Phase 2 only, if becShift)
+KT               →  appends lutK, g1, …  (when healLength ≤ 2π/k)
+```
+
+**Shared keys:** Names like `g` and `eb` already exist when a later subsystem starts. A new *name* is appended to `keysUpd`; an existing name only updates `_data`.
+
+### When `keys.py` is required vs optional
+
+**Add a `Key` enum entry when:**
+
+- `bcs_action.py` or `bec_action.py` calls `key_index(keys, Key.YOUR_KEY)` for events or observables
+- Termination functions index into `sol.y[idx, :]`
+- Orchestrator merge logic uses `ydata.value(Key.YOUR_KEY)`
+
+**Optional (string keys suffice) when:**
+
+- The coupling is read/written only inside one subsystem via `dy.data["mykey"]` or `self.yval("mykey")`
+- Precedent: KT uses `g1`, `g2` as strings; only `LUTK` is in the enum
+
+### Example: how `dfac` was added
+
+```python
+# bcs/fermion.py — register + flow (steps 2–3)
+ydatakeysPrompt = [..., "dfac", ...]
+self.ydata.dataAppend({..., "dfac": 1.0, ...}, self.ydatakeys)
+
+def dylst(self, l, dy):
+    ...
+    dy.data["dfac"] = self.dDfac()   # only nonzero when isBEC=True
+
+# bcs/keys.py — step 4 (for typed access elsewhere)
+DFAC = "dfac"
+
+# bcs/bcs_action.py — step 5 only if orchestrator reads dfac directly
+# (dfac is consumed inside fermion propagators; no extra Action glue needed)
+```
+
+### Checklist
+
+```
+□ Derive ∂ζ/∂l (e.g. in mfPopov.nb for quantum sector)
+□ Add "zeta" to owning subsystem's ydatakeysPrompt + dataAppend initial value
+□ Implement dy.data["zeta"] = ... in that subsystem's dylst()
+□ Add Key.ZETA = "zeta" in keys.py if BCSAction/BECAction needs key_index
+□ Update bcs_action.py: dZ / merge corrections, events, FinalNum/FinalRhoSF if needed
+□ Add or extend pytest regression case
+```
+
+### Common pitfalls
+
+| Pitfall | Consequence | Fix |
+|---------|-------------|-----|
+| Edit `keys.py` only, no `dataAppend` | Key missing from ODE vector | Register in owning subsystem first |
+| Register in wrong subsystem | `add_by_key` strict merge fails | Put registration where `dylst` computes the derivative |
+| New key not in `keysUpd` | `ylst()` / `update()` skip it | Pass key list to `dataAppend(..., self.ydatakeys)` |
+| Merge by array index | Wrong physics if `keysUpd` orders differ | Always use `add_by_key`, never positional sum |
 
 ---
 

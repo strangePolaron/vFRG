@@ -1,0 +1,142 @@
+#!/usr/bin/python3
+# /// script
+# requires-python = ">=3.14"
+# dependencies = [
+#     "matplotlib",
+#     "numpy",
+#     "scipy",
+# ]
+# ///
+"""Quantum BEC boson RG flow with optional Kosterlitz-Thouless sector."""
+
+import numpy as np
+from bcs.distributions import nB
+from bcs.kt import KT
+from bcs.state import RGState
+
+ydatakeysPrompt = ["g", "rho", "avv", "all"]
+
+
+class QuantumAction:
+    def __init__(self, prsdata: RGState, m, cutoff, lpar_init0, beta, g0, rho0, KTSwitch=True):
+        self.KTSwitch = KTSwitch
+        self.m = m
+        self.cutoff = cutoff
+        self.lpar_0 = lpar_init0
+        self.lpar = self.lpar_0
+        self.beta = beta
+        self.k = self.cutoff * np.exp(-1.0 * self.lpar)
+        self.cutoff_0 = cutoff * np.exp(-1.0 * self.lpar_0)
+
+        self.ydatakeys = ydatakeysPrompt.copy()
+        self.ydata = prsdata
+        self.ydata.dataAppend({"g": g0, "rho": rho0, "avv": 1.0, "all": 1.0}, self.ydatakeys)
+        self.yval = lambda x: self.ydata.value(x)
+        self.ktStart = False
+        self.updInternalVar()
+        self.gnMax = 1
+        self.rbAct = KT(self.ydata, self.lutK(), self.gnMax, False)
+        self.ktStart = False
+        if KTSwitch:
+            tmp = self.rbAct.ydatakeys.copy()
+            tmp.remove("lutK")
+            self.ydata.keysUpdAppend(tmp)
+
+    def updInternalVar(self):
+        self.ek = pow(self.k, 2) / (2.0 * self.m)
+        self.k2 = pow(self.k, 2)
+        self.Ek = self.Ek_pole()
+        self.nbval = -1.0 * nB(self.Ek, self.beta)
+        self.coth = 1.0 + 2.0 * self.nbval
+        self.csch2 = 4.0 * self.nbval * (self.nbval + 1.0)
+        self.all_div_avv_sqrt = np.sqrt(self.yval("all") / self.yval("avv"))
+        self.dosCoeff = pow(self.k, 2) / (2.0 * np.pi)
+        self.ktStart = self.ktStart or self.isKTstart()
+
+    def Ek_pole(self):
+        return np.sqrt(
+            self.ek
+            * (self.ek + 2.0 * self.yval("g") * self.yval("rho") * self.yval("avv"))
+            * self.yval("all")
+            / self.yval("avv")
+        )
+
+    def rho1_diag(self):
+        return self.yval("all") * (
+            -1.0 * self.ek * self.coth / self.Ek + 1.0 / self.all_div_avv_sqrt
+        ) / 2.0
+
+    def rho2_diag(self):
+        coeff = -1.0 * pow(self.yval("g") * self.yval("all"), 2)
+        term1 = pow(self.ek, 2) * self.coth / (2.0 * pow(self.Ek, 3))
+        term2 = pow(self.ek / (2.0 * self.Ek), 2) * self.beta * self.csch2
+        return coeff * (term1 + term2)
+
+    def vll_diag(self):
+        return -1.0 * pow(self.yval("all"), 2) * self.ek * self.beta * self.csch2 / 4.0
+
+    def vvv_diag(self):
+        return (self.yval("all") * self.yval("avv")) * (
+            self.ek * self.coth / self.Ek - 1.0 / self.all_div_avv_sqrt
+        )
+
+    def upd(self, l):
+        self.lpar = l
+        self.k = self.cutoff * np.exp(-1.0 * self.lpar)
+        self.updInternalVar()
+        if self.KTSwitch and self.ktStart:
+            self.ydata.data["lutK"] = self.lutK()
+
+    def lutK(self):
+        return self.m / (self.yval("rho") * self.yval("all")) / self.beta
+
+    def drhoKT(self, dK):
+        Kkt = self.lutK()
+        return -1.0 * self.m * dK / pow(Kkt, 2) / self.beta
+
+    def dylst(self, l, dy: RGState):
+        self.upd(l)
+        drhoTot = self.rho1_diag() * self.dosCoeff
+        dg = self.rho2_diag() * self.dosCoeff
+        dall = self.vll_diag() * self.dosCoeff / self.yval("rho")
+        davv = self.vvv_diag() * self.dosCoeff / self.yval("rho")
+
+        dy.data["rho"] += drhoTot
+        dy.data["g"] += dg
+        dy.data["all"] += dall
+        dy.data["avv"] += davv
+
+        if self.KTSwitch and self.ktStart:
+            self.rbAct.eqRHS_ydata(l, dy)
+            dy.data["all"] += self.drhoKT(float(dy.data["lutK"])) / self.yval("rho")
+
+    def dylst_onlyBos(self, l, y):
+        self.ydata.update(y)
+        dy = self.ydata.zeroVecGen()
+        self.dylst(l, dy)
+        return dy.ylst()
+
+    def reNorm(self, dZleg=0.0):
+        return -2.0 * self.yval("g") * dZleg, self.yval("rho") * dZleg
+
+    def healLength(self):
+        return np.sqrt(1.0 / (2.0 * self.m * self.yval("g") * self.yval("rho") * self.yval("avv")))
+
+    def isKTstart(self):
+        return self.healLength() <= ((2.0 * np.pi) / self.k)
+
+    def meanfieldCrit(self):
+        return self.lutK() < (np.pi / 2.0)
+
+
+class BECterminFunc:
+    def __init__(self, m, beta, rhoidx, allidx):
+        self.terminal = True
+        self.direction = -1.0
+        self.m = m
+        self.beta = beta
+        self.rhoidx = rhoidx
+        self.allidx = allidx
+
+    def __call__(self, _, y):
+        return (self.beta / self.m) * (y[self.rhoidx] * y[self.allidx]) - 1e-3
