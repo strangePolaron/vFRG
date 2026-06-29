@@ -10,3 +10,9 @@ dependencies = [
     "scipy>=1.16.3",
     "tqdm>=4.67.1",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
