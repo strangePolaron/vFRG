@@ -47,7 +47,7 @@ def main():
     fig, ax = plt.subplots()
     ax.ticklabel_format(style="sci", scilimits=(-2, 2))
     c = ax.pcolormesh(
-        ebgrid.reshape(ori_shape),
+        -1.0 * np.log(ebgrid.reshape(ori_shape)) / 2.0 - np.euler_gamma + np.log(2.0),
         1.0 / (betagrid.reshape(ori_shape)),
         rhogrid,
         shading="nearest",
@@ -56,7 +56,7 @@ def main():
         vmax=np.max(rhogrid),
     )
     fig.colorbar(c, ax=ax)
-    ax.set_xlabel("$1/(k_n a)^2$")
+    ax.set_xlabel("$\\log(k_n a)$")
     ax.set_ylabel("$k_B T m/k_n^2$")
     ax.set_title("$A_{l,k}=\\rho_s/\\rho_{0,k}$")
     plt.show()

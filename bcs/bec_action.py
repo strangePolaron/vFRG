@@ -16,7 +16,9 @@ from bcs.state import RGState
 
 _bec_mu_hint: dict[tuple[float, float, float], float] = {}
 
-bareInt = lambda eb, m, cutoff: 1.0 / ((m / (2.0 * np.pi)) * (np.log(np.sqrt(m * eb) / cutoff)))
+bareInt = lambda eb, m, cutoff: 1.0 / (
+    (m / (2.0 * np.pi)) * (np.log(np.sqrt(m * eb) / np.sqrt(pow(cutoff, 2) + m * eb)))
+)
 
 
 class BECAction:
