@@ -143,7 +143,7 @@ The codebase has **two parallel computation tracks** sharing infrastructure in t
 | `plotTc.py` | `scripts/plot_tc.py` | BCS Tc sweep driver |
 | `plotTcBEC.py` | `scripts/plot_tc_bec.py` | BEC Tc sweep driver |
 
-Supporting modules: `bcs/keys.py` (coupling key enum), `bcs/distributions.py` (`nF`, `nB`), `bcs/mu_root.py` (bisection helpers).
+Supporting modules: `bcs/sector.py` (`RGSector`, `CouplingSpec`, `compose_sectors`), `bcs/merge_hooks.py` (cross-sector merge hooks), `bcs/keys.py`, `bcs/distributions.py`, `bcs/mu_root.py`.
 
 ---
 
@@ -179,85 +179,92 @@ RGState
 
 ## Adding a New Coupling
 
-When extending the FRG flow with a new coupling variable, **do not start with `keys.py`**. The `Key` enum is a label for orchestrator indexing; the coupling enters the flow when a subsystem registers it in `RGState`.
+All physics subsystems inherit from **`RGSector`** (`bcs/sector.py`). Adding a coupling is localized to the owning sector unless the orchestrator needs it for events, observables, or merge hooks.
 
-### Pipeline
+### Pipeline (sector-based)
 
 ```
- 1. Physics          Decide which sector owns ∂(newkey)/∂l
+ 1. Physics          Derive ∂(newkey)/∂l (e.g. mfPopov.nb for quantum sector)
         │
         ▼
- 2. Register         ydatakeysPrompt + dataAppend(...) in that subsystem
+ 2. CouplingSpec     Add to sector __init__ couplings tuple
         │
         ▼
- 3. Flow equation    dylst(l, dy) → dy.data["newkey"] = ...
+ 3. contribute       Implement dy.data["newkey"] = ... in contribute(l, dy)
         │
         ▼
  4. keys.py          Add Key enum entry (only if orchestrator/events need it)
         │
         ▼
- 5. Orchestrator     bcs_action.py / bec_action.py merge, observables, events
+ 5. merge_hooks      Add hook in bcs/merge_hooks.py only for cross-sector corrections
         │
         ▼
- 6. Tests            pytest regression + state merge if cross-subsystem
+ 6. Tests            pytest regression
 ```
 
-**Rule of thumb:** `keys.py` labels a drawer; the drawer is created in the subsystem's `dataAppend`.
+**Rule of thumb:** declare with `CouplingSpec`, flow in `contribute`, merge via `compose_sectors`.
 
 ### Subsystem ownership
 
-| Subsystem | Module | Typical couplings |
-|-----------|--------|-------------------|
-| Fermion (outer BCS) | `bcs/fermion.py` | `eb`, `ef`, `g`, `h`, `dfac`, `rhoF` |
-| Thermal boson | `bcs/thermal.py` | `g`, `eb`, `nthrm` |
-| Quantum BEC | `bcs/quantum.py` | `g`, `rho`, `avv`, `all` |
-| KT vortex sector | `bcs/kt.py` | `lutK`, `g1`, `g2`, … |
+| Subsystem | Module | Base class | Typical couplings |
+|-----------|--------|------------|-------------------|
+| Fermion (outer BCS) | `bcs/fermion.py` | `RGSector` | `eb`, `ef`, `g`, `h`, `dfac`, `rhoF` |
+| Thermal boson | `bcs/thermal.py` | `RGSector` | `g`, `eb`, `nthrm` |
+| Quantum BEC | `bcs/quantum.py` | `RGSector` | `g`, `rho`, `avv`, `all` |
+| KT vortex sector | `bcs/kt.py` | `RGSector` | `lutK`, `g1`, `g2`, … |
 
-Quantum-sector flow equations are typically derived in `mfPopov.nb` (mean-field + Popov counterterms) and ported to `bcs/quantum.py`.
+Quantum-sector flow equations are typically derived in `mfPopov.nb` and ported to `contribute` in `bcs/quantum.py`.
 
 ### BCS-track registration order
 
-Subsystems construct in fixed order inside `BCSAction.__init__`:
+Subsystems construct in fixed order inside `BCSAction.__init__`; each calls `RGSector._register` via `CouplingSpec`:
 
 ```
-OuterBCSFermion  →  registers eb, ef, g, h, dfac, rhoF
-ThermalBoson     →  appends g, eb, nthrm  (shared keys update in place)
-QuantumAction    →  appends g, rho, avv, all  (Phase 2 only, if becShift)
-KT               →  appends lutK, g1, …  (when healLength ≤ 2π/k)
+OuterBCSFermion  →  eb, ef, g, h, dfac, rhoF
+ThermalBoson     →  g, eb, nthrm  (shared keys update in place)
+QuantumAction    →  g, rho, avv, all  (Phase 2 only, if becShift)
+KT               →  lutK, g1, …  (when healLength ≤ 2π/k)
 ```
 
-**Shared keys:** Names like `g` and `eb` already exist when a later subsystem starts. A new *name* is appended to `keysUpd`; an existing name only updates `_data`.
+Orchestrator phases use `compose_sectors` with hooks from `bcs/merge_hooks.py`:
+
+```python
+compose_sectors(state, l, [bcsFer, thrBos], hooks=[make_h_renorm_hook_thr(h0)])
+```
 
 ### When `keys.py` is required vs optional
 
 **Add a `Key` enum entry when:**
 
 - `bcs_action.py` or `bec_action.py` calls `key_index(keys, Key.YOUR_KEY)` for events or observables
-- Termination functions index into `sol.y[idx, :]`
-- Orchestrator merge logic uses `ydata.value(Key.YOUR_KEY)`
+- A merge hook reads `Key.YOUR_KEY`
 
-**Optional (string keys suffice) when:**
+**Optional when:**
 
-- The coupling is read/written only inside one subsystem via `dy.data["mykey"]` or `self.yval("mykey")`
-- Precedent: KT uses `g1`, `g2` as strings; only `LUTK` is in the enum
+- The coupling is used only inside one sector's `contribute`
+- Precedent: KT `g1`, `g2` use string names; only `LUTK` is in the enum
 
-### Example: how `dfac` was added
+### Example: adding `dfac` today
 
 ```python
-# bcs/fermion.py — register + flow (steps 2–3)
-ydatakeysPrompt = [..., "dfac", ...]
-self.ydata.dataAppend({..., "dfac": 1.0, ...}, self.ydatakeys)
+# bcs/fermion.py — CouplingSpec registers on init; contribute writes flow
+couplings = (
+    ...
+    CouplingSpec("dfac", 1.0, Key.DFAC),
+    ...
+)
 
-def dylst(self, l, dy):
+def contribute(self, l, dy):
     ...
     dy.data["dfac"] = self.dDfac()   # only nonzero when isBEC=True
 
-# bcs/keys.py — step 4 (for typed access elsewhere)
+# bcs/keys.py — only because Key.DFAC is used in typed access
 DFAC = "dfac"
 
-# bcs/bcs_action.py — step 5 only if orchestrator reads dfac directly
-# (dfac is consumed inside fermion propagators; no extra Action glue needed)
+# No bcs_action.py change — dfac consumed inside fermion propagators
 ```
+
+See `tests/test_sector.py` for a minimal dummy-coupling example.
 
 ### Checklist
 

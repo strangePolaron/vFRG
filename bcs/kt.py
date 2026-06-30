@@ -10,24 +10,24 @@
 """Kosterlitz-Thouless RG for rigid-ball / vortex coupling sector."""
 
 import numpy as np
+from bcs.keys import Key
+from bcs.sector import CouplingSpec, RGSector
 from bcs.state import RGState
 
 cutoff_convert_2_rspc = lambda cutoff: 2.0 * np.pi / cutoff
 
 
-class KT:
+class KT(RGSector):
     def __init__(self, prsData: RGState, lutK, nMax: int, keysUpdRegis=True):
         self.lpar_add = 0.0
         self.g = 1.0 / (4.0 * np.sqrt(3.0))
         self.nMax = nMax
-        self.ydatakeys = ["lutK"] + [f"g{idx+1}" for idx in range(self.nMax)]
-        self.ydata = prsData
-        self.ydata.additem("lutK", lutK)
         vn = self.gn_init()
-        for idx in range(self.nMax):
-            self.ydata.additem(f"g{idx+1}", vn[idx])
-        if keysUpdRegis:
-            self.ydata.keysUpdAppend(self.ydatakeys)
+        couplings = (CouplingSpec("lutK", float(lutK), Key.LUTK),) + tuple(
+            CouplingSpec(f"g{idx + 1}", float(vn[idx])) for idx in range(self.nMax)
+        )
+        super().__init__(prsData, couplings, append_keys=keysUpdRegis)
+        self.ydatakeys = self.coupling_names
 
     def scaldim(self, n: int):
         return np.double((n**2 * np.pi) / (self.ydata.value("lutK")))
@@ -43,6 +43,9 @@ class KT:
 
     def parUpd(self, ynew):
         self.ydata.update(ynew)
+
+    def contribute(self, l, dy: RGState):
+        self.eqRHS_ydata(l, dy)
 
     def eqRHS_ydata(self, _, dy: RGState):
         gilen = len(self.ydatakeys) - 1
@@ -63,5 +66,5 @@ class KT:
     def eqRHS_onlyKT(self, lpar, y):
         self.parUpd(y)
         dy = self.ydata.zeroVecGen()
-        self.eqRHS_ydata(lpar, dy)
+        self.contribute(lpar, dy)
         return dy.ylst()

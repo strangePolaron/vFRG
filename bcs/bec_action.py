@@ -11,6 +11,7 @@ import scipy.integrate as itg
 from bcs import quantum
 from bcs.keys import Key, key_index
 from bcs.mu_root import bisect_with_guess
+from bcs.sector import compose_sectors
 from bcs.state import RGState
 
 _bec_mu_hint: dict[tuple[float, float, float], float] = {}
@@ -57,9 +58,7 @@ class BECAction:
 
     def eqn(self, l, ylst):
         self.ydata.update(ylst)
-        dy = self.ydata.zeroVecGen()
-        self.quantumbec.dylst(l, dy)
-        return dy.ylst()
+        return compose_sectors(self.ydata, l, [self.quantumbec])
 
     def FinalRhoSF(self):
         if self.sol.status == 1 or self.sol.status == -1:

@@ -9,6 +9,8 @@
 
 import numpy as np
 from bcs.distributions import nB, nF
+from bcs.keys import Key
+from bcs.sector import CouplingSpec, RGSector
 from bcs.state import RGState
 
 thetaFunc = lambda x: (np.arctan(1000.0 * x)) / np.pi + 1.0 / 2.0
@@ -88,7 +90,7 @@ class efDiag:
 ydatakeysPrompt = ["eb", "ef", "g", "h", "dfac", "rhoF"]
 
 
-class OuterBCSFermion:
+class OuterBCSFermion(RGSector):
     def __init__(self, prsdata: RGState, mf, beta, gFF, mu, cutoff, lpar=0.0, h=1.0):
         self.efSwitch = True
         self.muf = mu
@@ -100,9 +102,16 @@ class OuterBCSFermion:
         self.beta = beta
         eb = -1.0 * pow(h, 2) / gFF - 2.0 * self.muf
         assert eb > 0, "already condensed"
-        self.ydatakeys = ydatakeysPrompt.copy()
-        self.ydata = prsdata
-        self.ydata.dataAppend({"eb": eb, "ef": 0.0, "g": 1e-4, "h": h, "dfac": 1.0, "rhoF": 0.0}, self.ydatakeys)
+        couplings = (
+            CouplingSpec("eb", eb, Key.EB),
+            CouplingSpec("ef", 0.0, Key.EF),
+            CouplingSpec("g", 1e-4, Key.G),
+            CouplingSpec("h", h, Key.H),
+            CouplingSpec("dfac", 1.0, Key.DFAC),
+            CouplingSpec("rhoF", 0.0, Key.RHO_F),
+        )
+        super().__init__(prsdata, couplings)
+        self.ydatakeys = self.coupling_names
         self.yval = lambda x: self.ydata.value(x)
         self.lpar0 = lpar
         self.lpar = lpar
@@ -228,7 +237,7 @@ class OuterBCSFermion:
             integ += (1.0 / 2.0) * (1.0 - (1.0 - 2.0 * self.nf_h) * self.ek0h / self.ekh_cp) * self.dosh
         return integ
 
-    def dylst(self, l, dy: RGState):
+    def contribute(self, l, dy: RGState):
         self.upd(l)
         dy.data["eb"] = self.ebDiag()
         dy.data["h"] = self.dhRen()

@@ -10,7 +10,9 @@ import scipy.integrate as itg
 
 from bcs import fermion, quantum, thermal
 from bcs.keys import Key, key_index
+from bcs.merge_hooks import bec_clamp_hook, h_renorm_hook_bec, make_h_renorm_hook_thr
 from bcs.mu_root import bisect_with_guess
+from bcs.sector import compose_sectors
 from bcs.state import RGState
 
 _bcs_mu_hint: dict[tuple[float, float, float, float], float] = {}
@@ -108,45 +110,22 @@ class BCSAction:
 
     def thrEqn(self, l, ylst):
         self.ydata.update(ylst)
-        dybcs = self.ydata.zeroVecGen()
-        dyThr = self.ydata.zeroVecGen()
-        self.bcsFer.dylst(l, dybcs)
-        self.thrBos.dylst(l, dyThr)
-        dZ = fermion.dh2dZ(dybcs.value(Key.H), self.ydata.value(Key.H))
-        debZ = -1.0 * self.ydata.value(Key.EB) * dZ
-        dgZ = -2.0 * self.ydata.value(Key.G) * dZ
-
-        dy = dybcs.add_by_key(dyThr)
-        dy.data["eb"] += debZ
-        dy.data["g"] += dgZ
-        dy.data["nthrm"] = dy.data["nthrm"] * pow(self.ydata.value(Key.H) / self.h0, 2)
-        return dy.ylst()
+        return compose_sectors(
+            self.ydata,
+            l,
+            [self.bcsFer, self.thrBos],
+            hooks=[make_h_renorm_hook_thr(self.h0)],
+        )
 
     def spfEqn(self, l, ylst):
         self.ydata.update(ylst)
-        self.ydata.data["rho"] = max(self.ydata.data["rho"], 1e-5)
-        self.ydata.data["avv"] = max(self.ydata.data["avv"], 1e-5)
-        self.ydata.data["all"] = max(self.ydata.data["all"], 1e-5)
-
-        dybcs = self.ydata.zeroVecGen()
-        dybec = self.ydata.zeroVecGen()
-        self.bcsFer.dylst(l, dybcs)
-        self.becBos.dylst(l, dybec)
-        dZ = fermion.dh2dZ(dybcs.value(Key.H), self.ydata.value(Key.H))
-        dgZ = -2.0 * self.ydata.value(Key.G) * dZ
-        drhoZ = self.ydata.value(Key.RHO) * dZ
-        dallZ = self.ydata.value(Key.ALL) * dZ
-        davvZ = self.ydata.value(Key.AVV) * dZ
-        drhoBCS = -1.0 * dybcs.value(Key.EB) / self.ydata.value(Key.G)
-
-        dy = dybec.add_by_key(dybcs)
-        dy.data["g"] += dgZ
-        dy.data["rho"] += drhoZ + drhoBCS
-        dy.data["eb"] = 0.0
-        dy.data["all"] += dallZ
-        dy.data["avv"] += davvZ
-        dy.data["nthrm"] = 0.0
-        return dy.ylst()
+        bec_clamp_hook(self.ydata, self.ydata.zero_like())
+        return compose_sectors(
+            self.ydata,
+            l,
+            [self.becBos, self.bcsFer],
+            hooks=[h_renorm_hook_bec],
+        )
 
     def FinalRhoSF(self):
         if self.becShift and self.solBEC.status == 0:

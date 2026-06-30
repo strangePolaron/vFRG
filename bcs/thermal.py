@@ -9,19 +9,25 @@
 
 import numpy as np
 from bcs.distributions import nB
+from bcs.keys import Key
+from bcs.sector import CouplingSpec, RGSector
 from bcs.state import RGState
 
 ydatakeysPrompt = ["g", "eb", "nthrm"]
 
 
-class ThermalBoson:
+class ThermalBoson(RGSector):
     def __init__(self, prsdata, m, cutoff, beta, g0, eb0, mu, lpar0=0.0):
+        couplings = (
+            CouplingSpec("g", g0, Key.G),
+            CouplingSpec("eb", eb0 - mu, Key.EB),
+            CouplingSpec("nthrm", 0.0, Key.NTHRM),
+        )
+        super().__init__(prsdata, couplings)
         self.m = m
         self.cutoff = cutoff
         self.beta = beta
-        self.ydatakeys = ydatakeysPrompt.copy()
-        self.ydata = prsdata
-        self.ydata.dataAppend({"g": g0, "eb": eb0 - mu, "nthrm": 0.0}, self.ydatakeys)
+        self.ydatakeys = self.coupling_names
         self.yval = lambda x: self.ydata.value(x)
         self.lpar = lpar0
 
@@ -55,7 +61,7 @@ class ThermalBoson:
         self.nbCalc()
         self.dosCalc()
 
-    def dylst(self, l, dy: RGState):
+    def contribute(self, l, dy: RGState):
         self.upd(l)
         dy.data["g"] = self.lp_g() * self.dosCoeff
         dy.data["eb"] = self.lp_eb() * self.dosCoeff

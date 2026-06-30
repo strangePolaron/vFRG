@@ -11,14 +11,23 @@
 
 import numpy as np
 from bcs.distributions import nB
+from bcs.keys import Key
 from bcs.kt import KT
+from bcs.sector import CouplingSpec, RGSector
 from bcs.state import RGState
 
 ydatakeysPrompt = ["g", "rho", "avv", "all"]
 
 
-class QuantumAction:
+class QuantumAction(RGSector):
     def __init__(self, prsdata: RGState, m, cutoff, lpar_init0, beta, g0, rho0, KTSwitch=True):
+        couplings = (
+            CouplingSpec("g", g0, Key.G),
+            CouplingSpec("rho", rho0, Key.RHO),
+            CouplingSpec("avv", 1.0, Key.AVV),
+            CouplingSpec("all", 1.0, Key.ALL),
+        )
+        super().__init__(prsdata, couplings)
         self.KTSwitch = KTSwitch
         self.m = m
         self.cutoff = cutoff
@@ -27,10 +36,7 @@ class QuantumAction:
         self.beta = beta
         self.k = self.cutoff * np.exp(-1.0 * self.lpar)
         self.cutoff_0 = cutoff * np.exp(-1.0 * self.lpar_0)
-
-        self.ydatakeys = ydatakeysPrompt.copy()
-        self.ydata = prsdata
-        self.ydata.dataAppend({"g": g0, "rho": rho0, "avv": 1.0, "all": 1.0}, self.ydatakeys)
+        self.ydatakeys = self.coupling_names
         self.yval = lambda x: self.ydata.value(x)
         self.ktStart = False
         self.updInternalVar()
@@ -94,7 +100,7 @@ class QuantumAction:
         Kkt = self.lutK()
         return -1.0 * self.m * dK / pow(Kkt, 2) / self.beta
 
-    def dylst(self, l, dy: RGState):
+    def contribute(self, l, dy: RGState):
         self.upd(l)
         drhoTot = self.rho1_diag() * self.dosCoeff
         dg = self.rho2_diag() * self.dosCoeff
@@ -107,7 +113,7 @@ class QuantumAction:
         dy.data["avv"] += davv
 
         if self.KTSwitch and self.ktStart:
-            self.rbAct.eqRHS_ydata(l, dy)
+            self.rbAct.contribute(l, dy)
             dy.data["all"] += self.drhoKT(float(dy.data["lutK"])) / self.yval("rho")
 
     def dylst_onlyBos(self, l, y):
