@@ -17,7 +17,7 @@ from bcs.state import RGState
 _bec_mu_hint: dict[tuple[float, float, float], float] = {}
 
 bareInt = lambda eb, m, cutoff: 1.0 / (
-    (m / (2.0 * np.pi)) * (np.log(np.sqrt(m * eb) / np.sqrt(pow(cutoff, 2) + m * eb)))
+    (m / (2.0 * np.pi)) * (np.log(np.sqrt(m * eb) / cutoff))
 )
 
 
@@ -28,8 +28,8 @@ class BECAction:
         self.lpar = 0.0
         self.mb = m
 
-        self.cutoff = np.sqrt(m * eb2boson0)
-        self.g0 = bareInt(eb2boson0 + mu, self.mb, self.cutoff)
+        self.cutoff = np.sqrt(m * eb2boson0 + m * mu)
+        self.g0 = bareInt(eb2boson0, self.mb, np.sqrt(pow(self.cutoff, 2) - 2.0 * self.mb * mu))
 
         self.mub = mu
         self.rho_init = max(self.mub / self.g0, 0)
