@@ -23,7 +23,7 @@ bareInt = lambda eb, m, cutoff: 1.0 / (
 
 
 class BCSAction:
-    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=100.0):
+    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=40.0):
         self.efSwitch = False
         self.KTswitch = True
 
@@ -143,9 +143,9 @@ class BCSAction:
             ferNum = self.solThr.y[rho_f_idx, -1]
         if self.becShift:
             bosNum = self.solThr.y[nthrm_idx, -1]
-            bosNum += max(self.solBEC.y[self.becrhoidx, -1], 0.0) * pow(
-                self.solBEC.y[self.hidx, -1] / self.h0, 2
-            )
+            bosNum += max(self.solBEC.y[self.becrhoidx, -1], 0.0) #* pow(
+            #    self.solBEC.y[self.hidx, -1] / self.h0, 2
+            #)
         else:
             bosNum = self.solThr.y[nthrm_idx, -1]
         return ferNum * 2.0 + 2.0 * bosNum

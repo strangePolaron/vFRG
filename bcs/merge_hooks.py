@@ -12,7 +12,7 @@ def make_h_renorm_hook_thr(h0: float):
         dZ = fermion.dh2dZ(dy.value(Key.H), state.value(Key.H))
         dy.data["eb"] += -1.0 * state.value(Key.EB) * dZ
         dy.data["g"] += -2.0 * state.value(Key.G) * dZ
-        dy.data["nthrm"] = dy.data["nthrm"] * pow(state.value(Key.H) / h0, 2)
+        #dy.data["nthrm"] = dy.data["nthrm"] * pow(state.value(Key.H) / h0, 2)
 
     return hook
 
