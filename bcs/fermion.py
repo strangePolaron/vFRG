@@ -246,6 +246,9 @@ class OuterBCSFermion(RGSector):
         dy.data["dfac"] = self.dDfac()
         dy.data["rhoF"] = self.drhoF()
 
+    def contribute_post(self, l: float, dy: RGState) -> None:
+        return super().contribute_post(l, dy)
+
     def dylst_BCSonly(self, l, ylst):
         self.ydata.update(ylst)
         dy = self.ydata.zeroVecGen()

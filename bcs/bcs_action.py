@@ -10,7 +10,7 @@ import scipy.integrate as itg
 
 from bcs import fermion, quantum, thermal
 from bcs.keys import Key, key_index
-from bcs.merge_hooks import bec_clamp_hook, h_renorm_hook_bec, make_h_renorm_hook_thr
+from bcs.merge_hooks import bec_clamp_hook, h_renorm_hook_bec, make_h_renorm_hook_thr, kt_hook_bec
 from bcs.mu_root import bisect_with_guess
 from bcs.sector import compose_sectors
 from bcs.state import RGState
@@ -23,7 +23,7 @@ bareInt = lambda eb, m, cutoff: 1.0 / (
 
 
 class BCSAction:
-    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=40.0):
+    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=100.0):
         self.efSwitch = False
         self.KTswitch = True
 
@@ -95,7 +95,7 @@ class BCSAction:
             self.becrhoidx = key_index(keys, Key.RHO)
             self.becallidx = key_index(keys, Key.ALL)
             self.becavvidx = key_index(keys, Key.AVV)
-            self.terminFuncBEC = quantum.BECterminFunc(self.mb, self.beta, self.becrhoidx, self.becallidx)
+            self.terminFuncBEC = quantum.BECterminFunc(self.mb, self.beta, self.becrhoidx, self.becallidx, self.becavvidx)
             self.y0BEC = self.ydata.ylst()
             self.solBEC = itg.solve_ivp(
                 self.spfEqn,
@@ -124,7 +124,7 @@ class BCSAction:
             self.ydata,
             l,
             [self.becBos, self.bcsFer],
-            hooks=[h_renorm_hook_bec],
+            hooks=[h_renorm_hook_bec, kt_hook_bec],
         )
 
     def FinalRhoSF(self):

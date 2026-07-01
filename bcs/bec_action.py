@@ -10,6 +10,7 @@ import scipy.integrate as itg
 
 from bcs import quantum
 from bcs.keys import Key, key_index
+from bcs.merge_hooks import kt_hook_bec
 from bcs.mu_root import bisect_with_guess
 from bcs.sector import compose_sectors
 from bcs.state import RGState
@@ -28,7 +29,7 @@ class BECAction:
         self.lpar = 0.0
         self.mb = m
 
-        self.cutoff = np.sqrt(m * eb2boson0 + m * mu)
+        self.cutoff = np.sqrt(m * eb2boson0 + 0. * self.mb * mu)
         self.g0 = bareInt(eb2boson0, self.mb, np.sqrt(pow(self.cutoff, 2) - 2.0 * self.mb * mu))
 
         self.mub = mu
@@ -39,28 +40,43 @@ class BECAction:
             self.ydata, self.mb, self.cutoff, self.lpar, self.beta, self.g0, self.rho_init, self.KTSwitch
         )
 
+        #print(f"healLength:\t{self.quantumbec.healLength()},\tRScutoff:\t{2.*np.pi/self.cutoff}")
+
         assert self.ydata.keysUpd is not None, "ydata.keysUpd is not updated"
         keys = self.ydata.keysUpd
         self.rhoidx = key_index(keys, Key.RHO)
         self.allidx = key_index(keys, Key.ALL)
+        self.avvidx = key_index(keys, Key.AVV)
 
-        self.terminFunc = quantum.BECterminFunc(self.mb, self.beta, self.rhoidx, self.allidx)
+        self.terminFunc = quantum.BECterminFunc(self.mb, self.beta, self.rhoidx, self.allidx, self.avvidx)
         self.y0 = self.ydata.ylst()
-
-        self.sol = itg.solve_ivp(
-            self.eqn,
-            (np.double(0.0), np.double(20.0)),
-            self.y0,
-            method="LSODA",
-            rtol=1e-7,
-            atol=1e-7,
-            min_step=1e-12,
-            events=self.terminFunc,
-        )
+        try:
+            self.sol = itg.solve_ivp(
+                self.eqn,
+                (np.double(0.0), np.double(20.0)),
+                self.y0,
+                method="LSODA",
+                rtol=1e-7,
+                atol=1e-7,
+                min_step=1e-12,
+                events=self.terminFunc,
+            )
+        except ValueError:
+            print(f"mu:\t{self.mub},\ty:\t{self.ydata.ylst()}")
 
     def eqn(self, l, ylst):
+        """
+        if ylst[self.allidx]<1e-3:
+            ylst[self.allidx] = 1e-3 * np.exp(ylst[self.allidx])
+        if ylst[self.avvidx]<1e-3:
+            ylst[self.avvidx] = 1e-3 * np.exp(ylst[self.avvidx])
+        if ylst[self.rhoidx]<1e-3:
+            ylst[self.rhoidx] = 1e-3 * np.exp(ylst[self.rhoidx])
+        """
+        np.nan_to_num(ylst, nan=0.0, posinf=0.0, neginf=0.0)
+
         self.ydata.update(ylst)
-        return compose_sectors(self.ydata, l, [self.quantumbec])
+        return compose_sectors(self.ydata, l, [self.quantumbec], [kt_hook_bec],)
 
     def FinalRhoSF(self):
         if self.sol.status == 1 or self.sol.status == -1:
@@ -74,7 +90,7 @@ class BECAction:
 
 
 def findMu(targetNum, ebBos, beta, mass, mu_guess=None, use_hint_cache=True):
-    mu0 = 10.0 * targetNum * np.pi / mass
+    mu0 = min(20.0 * targetNum * np.pi / mass, ebBos/2. - 1e-3)
     lo = 1e-3
     hi = mu0
     cache_key = (float(ebBos), float(mass), float(targetNum))
