@@ -87,6 +87,16 @@ class QuantumAction(RGSector):
         )
 
     def upd(self, l):
+        """
+        if self.yval("all")<=0:
+            print (f"all:\t{self.yval("all")}")
+        if self.yval("avv")<=0:
+            print (f"avv:\t{self.yval("avv")}")
+        if self.yval("g")<=0:
+            print (f"avv:\t{self.yval("g")}")
+        if self.yval("rho")<=0:
+            print (f"rho:\t{self.yval("rho")}")
+        """
         self.lpar = l
         self.k = self.cutoff * np.exp(-1.0 * self.lpar)
         self.updInternalVar()
@@ -136,13 +146,14 @@ class QuantumAction(RGSector):
 
 
 class BECterminFunc:
-    def __init__(self, m, beta, rhoidx, allidx):
+    def __init__(self, m, beta, rhoidx, allidx, avvidx):
         self.terminal = True
         self.direction = -1.0
         self.m = m
         self.beta = beta
         self.rhoidx = rhoidx
         self.allidx = allidx
+        self.avvidx = avvidx
 
     def __call__(self, _, y):
-        return (self.beta / self.m) * (y[self.rhoidx] * y[self.allidx]) - 1e-3
+        return min((self.beta / self.m) * (y[self.rhoidx] * y[self.allidx]), y[self.avvidx], y[self.allidx]) - 1e-3

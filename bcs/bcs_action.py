@@ -23,7 +23,7 @@ bareInt = lambda eb, m, cutoff: 1.0 / (
 
 
 class BCSAction:
-    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=40.0):
+    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=100.0):
         self.efSwitch = False
         self.KTswitch = True
 
@@ -95,7 +95,7 @@ class BCSAction:
             self.becrhoidx = key_index(keys, Key.RHO)
             self.becallidx = key_index(keys, Key.ALL)
             self.becavvidx = key_index(keys, Key.AVV)
-            self.terminFuncBEC = quantum.BECterminFunc(self.mb, self.beta, self.becrhoidx, self.becallidx)
+            self.terminFuncBEC = quantum.BECterminFunc(self.mb, self.beta, self.becrhoidx, self.becallidx, self.becavvidx)
             self.y0BEC = self.ydata.ylst()
             self.solBEC = itg.solve_ivp(
                 self.spfEqn,

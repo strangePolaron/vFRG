@@ -40,7 +40,7 @@ def main():
     with open("Results/bec.pickle", "rb") as f:
         dat = pickle.load(f)
     rhogrid = dat["rhosf"]
-
+    rhogrid = np.nan_to_num(rhogrid, nan=0.0, posinf=0.0, neginf=0.0)
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 20
     plt.rcParams["mathtext.fontset"] = "cm"

@@ -20,7 +20,7 @@ cutoff_convert_2_rspc = lambda cutoff: 2.0 * np.pi / cutoff
 class KT(RGSector):
     def __init__(self, prsData: RGState, lutK, nMax: int, keysUpdRegis=True):
         self.lpar_add = 0.0
-        self.g = 1.0 / (4.0 * np.sqrt(3.0))
+        self.g = 1.0 / (4.0 * np.sqrt(3.0)) 
         self.nMax = nMax
         vn = self.gn_init()
         couplings = (CouplingSpec("lutK", float(lutK), Key.LUTK),) + tuple(
