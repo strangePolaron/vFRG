@@ -16,6 +16,9 @@ class _DummySector(RGSector):
     def contribute(self, l: float, dy: RGState) -> None:
         dy.data[self.coupling_names[0]] = self._scale * l
 
+    def contribute_post(self, l: float, dy: RGState) -> RGState | None:
+        return super().contribute_post(l, dy)
+
 
 def test_coupling_spec_registers_data_and_keys_upd():
     state = RGState()
@@ -68,6 +71,9 @@ def test_add_coupling_via_coupling_spec_only():
 
         def contribute(self, l, dy):
             dy.data["zeta"] = l
+
+        def contribute_post(self, l: float, dy: RGState) -> RGState | None:
+            return super().contribute_post(l, dy)
 
     sector = ZetaSector(state)
     dy = state.zero_like()
