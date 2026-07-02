@@ -48,6 +48,7 @@ class KT(RGSector):
     def contribute(self, l, dy: RGState):
         self.eqRHS_ydata(l, dy)
 
+<<<<<<< HEAD
     def contribute_post(self, l: float, dy: RGState) -> RGState | None:
         #return super().contribute_post(l, dy)
         dy_new = dy.zero_like()
@@ -56,6 +57,10 @@ class KT(RGSector):
         dy_new.data["iota"] = 0.0
         return dy_new
 
+=======
+    def contribute_post(self, l: float, dy: RGState) -> None:
+        return super().contribute_post(l, dy)
+>>>>>>> 819e16bd16788c3a8c3fad90a05952e5bb7afc60
 
     def eqRHS_ydata(self, _, dy: RGState):
         gilen = len(self.ydatakeys) - 1
@@ -65,7 +70,10 @@ class KT(RGSector):
         dy.data["lutK"] = y_lutK
         
         bareScl = -1.0 * dy.data["iota"] / self.ydata.value("iota")
+<<<<<<< HEAD
         #print(bareScl)
+=======
+>>>>>>> 819e16bd16788c3a8c3fad90a05952e5bb7afc60
         vorRegFactor = 1.0 / (1.0 + pow(self.ydata.value("iota"), 2))
         
         for varName in self.ydatakeys[1:]:

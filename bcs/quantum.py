@@ -52,6 +52,7 @@ class QuantumAction(RGSector):
 
     def updInternalVar(self):
         self.all_div_avv_sqrt = np.sqrt(self.yval("all") / self.yval("avv"))
+<<<<<<< HEAD
         self.k2 = pow(self.k, 2)
         self.dosCoeff = self.k2 / (2.0 * np.pi)
         if (self.k > 1e-2) and (self.k2*self.all_div_avv_sqrt)>1e-5:
@@ -75,6 +76,10 @@ class QuantumAction(RGSector):
         self.nbval = 1.0 / (self.beta * self.Ek)
         self.coth = self.k + 2.0*self.nbval
         self.csch2 = 4.0 * self.nbval * (self.k + self.nbval)
+=======
+        self.dosCoeff = pow(self.k, 2) / (2.0 * np.pi)
+        #self.ktStart = self.ktStart or self.isKTstart()
+>>>>>>> 819e16bd16788c3a8c3fad90a05952e5bb7afc60
 
     def Ek_pole(self):
         return np.sqrt(
@@ -140,6 +145,7 @@ class QuantumAction(RGSector):
         dy.data["all"] += dall
         dy.data["avv"] += davv
 
+<<<<<<< HEAD
     def contribute_post(self, l, dy: RGState) -> RGState | None:
         if self.KTSwitch:  #and self.ktStart:
             dypost = self.rbAct.contribute_post(l, dy)
@@ -149,6 +155,12 @@ class QuantumAction(RGSector):
                 dypost.data["all"] += dall
             return dypost
         return None
+=======
+    def contribute_post(self, l, dy: RGState):
+        if self.KTSwitch:  #and self.ktStart:
+            self.rbAct.contribute(l, dy)
+            dy.data["all"] += self.drhoKT(float(dy.data["lutK"])) / self.yval("rho")
+>>>>>>> 819e16bd16788c3a8c3fad90a05952e5bb7afc60
 
     def dylst_onlyBos(self, l, y):
         self.ydata.update(y)
