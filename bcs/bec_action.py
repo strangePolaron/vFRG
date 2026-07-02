@@ -29,8 +29,8 @@ class BECAction:
         self.lpar = 0.0
         self.mb = m
 
-        self.cutoff = np.sqrt(m * eb2boson0 - 2. * self.mb * mu)
-        self.g0 = bareInt(eb2boson0, self.mb, self.cutoff)
+        self.cutoff = np.sqrt(m * eb2boson0)
+        self.g0 = bareInt(eb2boson0, self.mb, np.sqrt(pow(self.cutoff, 2) - 2. * self.mb * mu))
 
         self.mub = mu
         self.rho_init = max(self.mub / self.g0, 0)
@@ -94,7 +94,7 @@ class BECAction:
 
 def findMu(targetNum, ebBos, beta, mass, mu_guess=None, use_hint_cache=True):
     mu0 = ebBos/2.0 - 1e-5 #min(20.0 * targetNum * np.pi / mass, ebBos/2. - 1e-3)
-    lo = ebBos * 0.05
+    lo = ebBos * 0.0002
     hi = mu0
     cache_key = (float(ebBos), float(mass), float(targetNum))
     if mu_guess is None and use_hint_cache:
