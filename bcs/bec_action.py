@@ -29,8 +29,8 @@ class BECAction:
         self.lpar = 0.0
         self.mb = m
 
-        self.cutoff = np.sqrt(m * eb2boson0 + 0. * self.mb * mu)
-        self.g0 = bareInt(eb2boson0, self.mb, np.sqrt(pow(self.cutoff, 2) - 2.0 * self.mb * mu))
+        self.cutoff = np.sqrt(m * eb2boson0 - 2. * self.mb * mu)
+        self.g0 = bareInt(eb2boson0, self.mb, self.cutoff)
 
         self.mub = mu
         self.rho_init = max(self.mub / self.g0, 0)
