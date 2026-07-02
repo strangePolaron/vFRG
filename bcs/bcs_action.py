@@ -129,7 +129,7 @@ class BCSAction:
 
     def FinalRhoSF(self):
         if self.becShift and self.solBEC.status == 0:
-            return float(self.solBEC.y[self.becallidx, -1])
+            return np.nan_to_num(float(self.solBEC.y[self.becallidx, -1]), nan=0.0, posinf=0.0, neginf=0.0)
         return float(0.0)
 
     def FinalNum(self):
@@ -148,7 +148,7 @@ class BCSAction:
             #)
         else:
             bosNum = self.solThr.y[nthrm_idx, -1]
-        return ferNum * 2.0 + 2.0 * bosNum
+        return np.nan_to_num(ferNum * 2.0 + 2.0 * bosNum, nan=0.0, posinf=0.0, neginf=0.0)
 
 
 def findMu(targetNum, eb, beta, cutoff, mass, mu_guess=None, use_hint_cache=True):

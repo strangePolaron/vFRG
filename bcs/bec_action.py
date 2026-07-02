@@ -85,11 +85,11 @@ class BECAction:
         if self.sol.status == 1 or self.sol.status == -1:
             return float(0.0)
         assert self.ydata.keysUpd is not None, "ydata.keysUpd is not updated"
-        return float(self.sol.y[self.allidx, -1])
+        return np.nan_to_num((self.sol.y[self.allidx, -1]), nan=0.0, posinf=0.0, neginf=0.0)
 
     def FinalNum(self):
         assert self.ydata.keysUpd is not None, "ydata.keysUpd is not updated (FinalNum)"
-        return self.sol.y[self.rhoidx, -1]
+        return np.nan_to_num(self.sol.y[self.rhoidx, -1], nan=0.0, posinf=0.0, neginf=0.0)
 
 
 def findMu(targetNum, ebBos, beta, mass, mu_guess=None, use_hint_cache=True):
