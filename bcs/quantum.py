@@ -21,11 +21,13 @@ ydatakeysPrompt = ["g", "rho", "avv", "all"]
 
 class QuantumAction(RGSector):
     def __init__(self, prsdata: RGState, m, cutoff, lpar_init0, beta, g0, rho0, KTSwitch=True):
+        iota0 = (cutoff * np.exp(-1.0*lpar_init0) /(2.*np.pi*np.sqrt(2.0*m*g0*rho0)))
         couplings = (
             CouplingSpec("g", g0, Key.G),
             CouplingSpec("rho", rho0, Key.RHO),
             CouplingSpec("avv", 1.0, Key.AVV),
             CouplingSpec("all", 1.0, Key.ALL),
+            CouplingSpec("iota", iota0, Key.IOTA),
         )
         super().__init__(prsdata, couplings)
         self.KTSwitch = KTSwitch
@@ -38,26 +40,41 @@ class QuantumAction(RGSector):
         self.cutoff_0 = cutoff * np.exp(-1.0 * self.lpar_0)
         self.ydatakeys = self.coupling_names
         self.yval = lambda x: self.ydata.value(x)
-        self.ktStart = False
+        #self.ktStart = False
         self.updInternalVar()
         self.gnMax = 1
         self.rbAct = KT(self.ydata, self.lutK(), self.gnMax, False)
-        self.ktStart = False
+        #self.ktStart = False
         if KTSwitch:
             tmp = self.rbAct.ydatakeys.copy()
             tmp.remove("lutK")
             self.ydata.keysUpdAppend(tmp)
 
     def updInternalVar(self):
-        self.ek = pow(self.k, 2) / (2.0 * self.m)
-        self.k2 = pow(self.k, 2)
-        self.Ek = self.Ek_pole()
-        self.nbval = -1.0 * nB(self.Ek, self.beta)
-        self.coth = 1.0 + 2.0 * self.nbval
-        self.csch2 = 4.0 * self.nbval * (self.nbval + 1.0)
         self.all_div_avv_sqrt = np.sqrt(self.yval("all") / self.yval("avv"))
-        self.dosCoeff = pow(self.k, 2) / (2.0 * np.pi)
-        self.ktStart = self.ktStart or self.isKTstart()
+        self.k2 = pow(self.k, 2)
+        self.dosCoeff = self.k2 / (2.0 * np.pi)
+        if (self.k > 1e-2) and (self.k2*self.all_div_avv_sqrt)>1e-5:
+            self.ek = pow(self.k, 2) / (2.0 * self.m)
+            self.k2 = pow(self.k, 2)
+            self.Ek = self.Ek_pole()
+            self.nbval = -1.0 * nB(self.Ek, self.beta)
+            self.coth = 1.0 + 2.0 * self.nbval
+            self.csch2 = 4.0 * self.nbval * (self.nbval + 1.0)
+            #if self.yval("all") / self.yval("avv")<=0.0:
+            #    print("Neg found", self.yval("all"), self.yval("avv"), self.ek, self.yval("rho"))
+            #    a=input()
+        else:
+            self.updInfrared()
+
+        #self.ktStart = self.ktStart or self.isKTstart()
+
+    def updInfrared(self):
+        self.ek = 1.0 / (2.0 * self.m)
+        self.Ek = self.all_div_avv_sqrt * np.sqrt(self.k2 * self.ek + 2.0 * self.yval("g") * self.yval("rho") * self.yval("avv"))
+        self.nbval = 1.0 / (self.beta * self.Ek)
+        self.coth = self.k + 2.0*self.nbval
+        self.csch2 = 4.0 * self.nbval * (self.k + self.nbval)
 
     def Ek_pole(self):
         return np.sqrt(
@@ -100,8 +117,9 @@ class QuantumAction(RGSector):
         self.lpar = l
         self.k = self.cutoff * np.exp(-1.0 * self.lpar)
         self.updInternalVar()
-        if self.KTSwitch and self.ktStart:
+        if self.KTSwitch:  #and self.ktStart:
             self.ydata.data["lutK"] = self.lutK()
+            self.ydata.data["iota"] = self.healLength() * self.k / (2.0 * np.pi)
 
     def lutK(self):
         return self.m / (self.yval("rho") * self.yval("all")) / self.beta
@@ -122,9 +140,15 @@ class QuantumAction(RGSector):
         dy.data["all"] += dall
         dy.data["avv"] += davv
 
-        if self.KTSwitch and self.ktStart:
-            self.rbAct.contribute(l, dy)
-            dy.data["all"] += self.drhoKT(float(dy.data["lutK"])) / self.yval("rho")
+    def contribute_post(self, l, dy: RGState) -> RGState | None:
+        if self.KTSwitch:  #and self.ktStart:
+            dypost = self.rbAct.contribute_post(l, dy)
+            if dypost is not None:
+                dall = self.drhoKT(float(dypost.data["lutK"])) / self.yval("rho")
+                #print(dall)
+                dypost.data["all"] += dall
+            return dypost
+        return None
 
     def dylst_onlyBos(self, l, y):
         self.ydata.update(y)
@@ -156,4 +180,4 @@ class BECterminFunc:
         self.avvidx = avvidx
 
     def __call__(self, _, y):
-        return min((self.beta / self.m) * (y[self.rhoidx] * y[self.allidx]), y[self.avvidx], y[self.allidx]) - 1e-3
+        return min((y[self.rhoidx]), y[self.avvidx], y[self.allidx]) - 1e-3

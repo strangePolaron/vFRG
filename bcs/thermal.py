@@ -67,6 +67,9 @@ class ThermalBoson(RGSector):
         dy.data["eb"] = self.lp_eb() * self.dosCoeff
         dy.data["nthrm"] = self.lp_dn() * self.dosCoeff
 
+    def contribute_post(self, l: float, dy: RGState) -> RGState | None:
+        return super().contribute_post(l, dy)
+
     def dylst_onlythrm(self, l, y):
         self.ydata.update(y)
         dy = self.ydata.zeroVecGen()

@@ -15,6 +15,7 @@ class Key(StrEnum):
     AVV = "avv"
     ALL = "all"
     LUTK = "lutK"
+    IOTA = "iota"
 
 
 def key_index(keys_upd: list[str], key: Key | str) -> int:

@@ -31,5 +31,10 @@ def h_renorm_hook_bec(state: RGState, dy: RGState) -> None:
     dy.data["rho"] += state.value(Key.RHO) * dZ + (-1.0 * dy.value(Key.EB) / state.value(Key.G))
     dy.data["eb"] = 0.0
     dy.data["all"] += state.value(Key.ALL) * dZ
-    dy.data["avv"] += state.value(Key.AVV) * dZ
+    dy.data["avv"] += state.value(Key.AVV) * dZ 
     dy.data["nthrm"] = 0.0
+
+def kt_hook_bec(state: RGState, dy: RGState) -> None:
+    """diota"""
+    dy.data["iota"] = -1.0 * state.value(Key.IOTA) * (1.0 + (1.0/2.0)*(dy.data["avv"]/state.value(Key.AVV) + dy.data["g"]/state.value(Key.G) + dy.data["rho"]/state.value(Key.RHO)))
+

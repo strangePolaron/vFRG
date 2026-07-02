@@ -55,6 +55,12 @@ class RGSector(ABC):
     def contribute(self, l: float, dy: RGState) -> None:
         """Write this sector's derivatives into dy (zeroed buffer)."""
 
+    @abstractmethod
+    def contribute_post(self, l: float, dy: RGState) -> RGState | None:
+        """Write this sector's derivatives into dy (zeroed buffer)."""
+        """This function is designed for the case you need information of previous dy calculation"""
+
+
     def dylst(self, l: float, dy: RGState) -> None:
         self.contribute(l, dy)
 
@@ -75,4 +81,9 @@ def compose_sectors(
         raise ValueError("compose_sectors requires at least one sector")
     for hook in hooks:
         hook(state, dy_accum)
+    for sector in sectors:
+        #dy_sector = state.zero_like()
+        dy_sector = sector.contribute_post(l, dy_accum)
+        if dy_sector is not None:
+            dy_accum = dy_sector if dy_accum is None else dy_accum.add_by_key(dy_sector)
     return dy_accum.ylst()

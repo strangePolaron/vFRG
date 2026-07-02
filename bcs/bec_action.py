@@ -10,6 +10,7 @@ import scipy.integrate as itg
 
 from bcs import quantum
 from bcs.keys import Key, key_index
+from bcs.merge_hooks import kt_hook_bec
 from bcs.mu_root import bisect_with_guess
 from bcs.sector import compose_sectors
 from bcs.state import RGState
@@ -52,7 +53,7 @@ class BECAction:
         try:
             self.sol = itg.solve_ivp(
                 self.eqn,
-                (np.double(0.0), np.double(20.0)),
+                (np.double(0.0), np.double(40.0)),
                 self.y0,
                 method="LSODA",
                 rtol=1e-7,
@@ -72,10 +73,13 @@ class BECAction:
         if ylst[self.rhoidx]<1e-3:
             ylst[self.rhoidx] = 1e-3 * np.exp(ylst[self.rhoidx])
         """
-        np.nan_to_num(ylst, nan=0.0, posinf=0.0, neginf=0.0)
+        #if np.isnan(ylst).any():
+        #    print(ylst)
+        #    a = input()
+        #np.nan_to_num(ylst, nan=0.0, posinf=0.0, neginf=0.0)
 
         self.ydata.update(ylst)
-        return compose_sectors(self.ydata, l, [self.quantumbec])
+        return compose_sectors(self.ydata, l, [self.quantumbec], [kt_hook_bec],)
 
     def FinalRhoSF(self):
         if self.sol.status == 1 or self.sol.status == -1:
@@ -89,8 +93,8 @@ class BECAction:
 
 
 def findMu(targetNum, ebBos, beta, mass, mu_guess=None, use_hint_cache=True):
-    mu0 = min(20.0 * targetNum * np.pi / mass, ebBos/2. - 1e-3)
-    lo = 1e-3
+    mu0 = ebBos/2.0 - 1e-5 #min(20.0 * targetNum * np.pi / mass, ebBos/2. - 1e-3)
+    lo = ebBos * 0.05
     hi = mu0
     cache_key = (float(ebBos), float(mass), float(targetNum))
     if mu_guess is None and use_hint_cache:
@@ -98,7 +102,7 @@ def findMu(targetNum, ebBos, beta, mass, mu_guess=None, use_hint_cache=True):
 
     def func(mui):
         return BECAction(ebBos, beta, mui, mass).FinalNum() - targetNum
-
+    
     root = bisect_with_guess(func, lo, hi, xtol=1e-5, mu_guess=mu_guess)
     if use_hint_cache:
         _bec_mu_hint[cache_key] = root
