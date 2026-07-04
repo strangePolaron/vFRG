@@ -21,7 +21,7 @@ ydatakeysPrompt = ["g", "rho", "avv", "all"]
 
 class QuantumAction(RGSector):
     def __init__(self, prsdata: RGState, m, cutoff, lpar_init0, beta, g0, rho0, KTSwitch=True):
-        iota0 = (cutoff * np.exp(-1.0*lpar_init0) /(2.*np.pi*np.sqrt(2.0*m*g0*rho0)))
+        iota0 = (cutoff * np.exp(-1.0*lpar_init0) /(np.sqrt(2.0*m*g0*rho0)))
         couplings = (
             CouplingSpec("g", g0, Key.G),
             CouplingSpec("rho", rho0, Key.RHO),
@@ -29,6 +29,7 @@ class QuantumAction(RGSector):
             CouplingSpec("all", 1.0, Key.ALL),
             CouplingSpec("iota", iota0, Key.IOTA),
         )
+        #print(iota0)
         super().__init__(prsdata, couplings)
         self.KTSwitch = KTSwitch
         self.m = m
@@ -54,7 +55,7 @@ class QuantumAction(RGSector):
         self.all_div_avv_sqrt = np.sqrt(self.yval("all") / self.yval("avv"))
         self.k2 = pow(self.k, 2)
         self.dosCoeff = self.k2 / (2.0 * np.pi)
-        if (self.k > 1e-2) and (self.k2*self.all_div_avv_sqrt)>1e-5:
+        if (self.k * np.sqrt(self.beta) > 1e-2) and (self.beta * self.k2*self.all_div_avv_sqrt)>1e-5:
             self.ek = pow(self.k, 2) / (2.0 * self.m)
             self.k2 = pow(self.k, 2)
             self.Ek = self.Ek_pole()
@@ -79,6 +80,7 @@ class QuantumAction(RGSector):
         #self.ktStart = self.ktStart or self.isKTstart()
 
     def Ek_pole(self):
+        #print(f"lpar:{self.lpar}, mu:{self.yval("g")*self.yval("rho")}")
         return np.sqrt(
             self.ek
             * (self.ek + 2.0 * self.yval("g") * self.yval("rho") * self.yval("avv"))
@@ -101,6 +103,7 @@ class QuantumAction(RGSector):
         return -1.0 * pow(self.yval("all"), 2) * self.ek * self.beta * self.csch2 / 4.0
 
     def vvv_diag(self):
+        #print(f"ek:{self.ek}, Ek:{self.Ek}, ek/Ek:{self.ek/self.Ek}, sqrt(avv/all):{1./self.all_div_avv_sqrt}")
         return (self.yval("all") * self.yval("avv")) * (
             self.ek * self.coth / self.Ek - 1.0 / self.all_div_avv_sqrt
         )
@@ -121,7 +124,7 @@ class QuantumAction(RGSector):
         self.updInternalVar()
         if self.KTSwitch:  #and self.ktStart:
             self.ydata.data["lutK"] = self.lutK()
-            self.ydata.data["iota"] = self.healLength() * self.k / (2.0 * np.pi)
+            self.ydata.data["iota"] = self.healLength() * self.k #/ (2.0 * np.pi)
 
     def lutK(self):
         return self.m / (self.yval("rho") * self.yval("all")) / self.beta
@@ -182,4 +185,6 @@ class BECterminFunc:
         self.avvidx = avvidx
 
     def __call__(self, _, y):
-        return min((y[self.rhoidx]), y[self.avvidx], y[self.allidx]) - 1e-3
+        if y[self.avvidx]>1e3:
+            return min(y[self.rhoidx], y[self.allidx], y[self.avvidx]) - 1e-3
+        return min(y[self.avvidx], y[self.allidx]) - 1e-3

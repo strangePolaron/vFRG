@@ -20,8 +20,9 @@ cutoff_convert_2_rspc = lambda cutoff: 2.0 * np.pi / cutoff
 class KT(RGSector):
     def __init__(self, prsData: RGState, lutK, nMax: int, keysUpdRegis=True):
         self.lpar_add = 0.0
-        self.g = 1.0 / (np.sqrt(3.0)) / pow(prsData.data["iota"], 2)
-        self.g = 1.0 / (4.0 * np.sqrt(3.0)) 
+        self.g = 1.0 / (np.sqrt(3.0)) /  pow(prsData.data["iota"], 2)
+        #print(prsData.data["iota"]*2.0*np.pi)
+        #self.g = 1.0 / (4.0 * np.sqrt(3.0)) 
         self.nMax = nMax
         vn = self.gn_init()
         couplings = (CouplingSpec("lutK", float(lutK), Key.LUTK),) + tuple(
@@ -58,17 +59,20 @@ class KT(RGSector):
 
     def eqRHS_ydata(self, _, dy: RGState):
         gilen = len(self.ydatakeys) - 1
+        vorRegFactor = np.log(1.0 / (1.0 + pow(self.ydata.value("iota"), 2)))
+        
+
         y_lutK = 4.0 * pow(np.pi, 3) * sum(
-            [(np.double(varName[1:]) ** 2) * np.pow(self.ydata.value(varName), 2) for varName in self.ydatakeys[1:]]
+            [(np.double(varName[1:]) ** 2) * np.pow(self.ydata.value(varName), 2) * np.exp(self.scaldim(int(varName[1:]))*vorRegFactor) for varName in self.ydatakeys[1:]]
         )
         dy.data["lutK"] = y_lutK
         
         bareScl = -1.0 * dy.data["iota"] / self.ydata.value("iota")
-        #print(bareScl)
-        vorRegFactor = 1.0 / (1.0 + pow(self.ydata.value("iota"), 2))
-        
+        #print(f"bare scaling factor:{bareScl}")
+        #print(f"iota:{self.ydata.value("iota")}")
         for varName in self.ydatakeys[1:]:
-            dy.data[varName] = (2.0 * bareScl - self.scaldim(int(varName[1:])) * vorRegFactor) * self.ydata.value(varName)
+            #print(f"scaling dimension:{self.scaldim(int(varName[1:]))}")
+            dy.data[varName] = (2.0 - self.scaldim(int(varName[1:]))) * bareScl * self.ydata.value(varName)
         for idx in range(gilen):
             tmpi = 0.0
             for jdx in range(idx + 1, gilen):

@@ -12,6 +12,7 @@
 
 import BCSna as bcs
 import numpy as np
+from bcs.mu_relax import findMu_relax_bcs
 
 kF = 1.0
 mf = 1.0
@@ -43,7 +44,8 @@ def rhoSF_eb_row(task):
     mu_hint = None
     row = []
     for beta in betas:
-        mu = bcs.findMu(tnum, eb, float(beta), cut, m, mu_guess=mu_hint)
+        #mu = bcs.findMu(tnum, eb, float(beta), cut, m, mu_guess=mu_hint)
+        mu = findMu_relax_bcs(tnum, eb, beta, 50.0, mf, mu_hint)
         mu_hint = mu
         row.append(_rho_at_mu(eb, float(beta), mu, tnum, cut, m))
     return row

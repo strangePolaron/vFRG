@@ -6,8 +6,8 @@ Do not unify with bec_action.bareInt, which uses a different formula.
 """
 
 import numpy as np
-import scipy.integrate as itg
 
+from bcs.ode_integrate import DEFAULT_MAX_ODE_STEPS, solve_rg_ivp  # [ode-max-steps]
 from bcs import fermion, quantum, thermal
 from bcs.keys import Key, key_index
 from bcs.merge_hooks import bec_clamp_hook, h_renorm_hook_bec, make_h_renorm_hook_thr, kt_hook_bec
@@ -21,9 +21,14 @@ bareInt = lambda eb, m, cutoff: 1.0 / (
     (m / (2.0 * np.pi)) * (np.log(np.sqrt(m * eb) / np.sqrt(pow(cutoff, 2) + m * eb)))
 )
 
+def myexp_IR(x):
+    if x<-30:
+        return 0.
+    else:
+        return np.exp(x)
 
 class BCSAction:
-    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=40.0):
+    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=40.0, max_ode_steps=None):
         self.efSwitch = False
         self.KTswitch = True
 
@@ -63,8 +68,12 @@ class BCSAction:
 
         self.terminFuncThr = thermal.ThrterminFunc(self.mb, self.beta, self.thrgidx, self.threbidx)
         self.y0Thr = self.ydata.ylst()
+        self.step_limit_hit = False  # [ode-max-steps]
+        self.step_limit_hit_thr = False  # [ode-max-steps]
+        self.step_limit_hit_bec = False  # [ode-max-steps]
 
-        self.solThr = itg.solve_ivp(
+        # [ode-max-steps]
+        thr_result = solve_rg_ivp(
             self.thrEqn,
             (np.double(0.0), np.double(20.0)),
             self.y0Thr,
@@ -73,10 +82,16 @@ class BCSAction:
             atol=1e-7,
             min_step=1e-12,
             events=self.terminFuncThr,
+            max_ode_steps=max_ode_steps or DEFAULT_MAX_ODE_STEPS,
         )
+        self.solThr = thr_result.sol
+        self.solThrKeys = self.ydata.keysUpd.copy()
+        
+        self.step_limit_hit_thr = thr_result.step_limit_hit
+        self.step_limit_hit = self.step_limit_hit_thr
 
         self.ydata.update(self.solThr.y[:, -1])
-        self.becShift = self.solThr.status == 1
+        self.becShift = self.solThr.status == 1 and not self.step_limit_hit_thr
 
         if self.becShift:
             self.rho_init = -1.0 * self.solThr.y[self.threbidx, -1] / self.solThr.y[self.thrgidx, -1]
@@ -97,7 +112,8 @@ class BCSAction:
             self.becavvidx = key_index(keys, Key.AVV)
             self.terminFuncBEC = quantum.BECterminFunc(self.mb, self.beta, self.becrhoidx, self.becallidx, self.becavvidx)
             self.y0BEC = self.ydata.ylst()
-            self.solBEC = itg.solve_ivp(
+            # [ode-max-steps]
+            bec_result = solve_rg_ivp(
                 self.spfEqn,
                 (np.double(self.solThr.t[-1]), np.double(20.0)),
                 self.y0BEC,
@@ -106,7 +122,11 @@ class BCSAction:
                 atol=1e-7,
                 min_step=1e-12,
                 events=self.terminFuncBEC,
+                max_ode_steps=max_ode_steps or DEFAULT_MAX_ODE_STEPS,
             )
+            self.solBEC = bec_result.sol
+            self.step_limit_hit_bec = bec_result.step_limit_hit
+            self.step_limit_hit = self.step_limit_hit_thr or self.step_limit_hit_bec
 
     def thrEqn(self, l, ylst):
         self.ydata.update(ylst)
@@ -119,7 +139,7 @@ class BCSAction:
 
     def spfEqn(self, l, ylst):
         self.ydata.update(ylst)
-        bec_clamp_hook(self.ydata, self.ydata.zero_like())
+        #bec_clamp_hook(self.ydata, self.ydata.zero_like())
         return compose_sectors(
             self.ydata,
             l,
@@ -139,6 +159,19 @@ class BCSAction:
         nthrm_idx = key_index(keys, Key.NTHRM)
         if self.becShift:
             ferNum = self.solBEC.y[rho_f_idx, -1]
+            if self.solBEC.status!=0:
+                self.bcsFer.upd(self.solBEC.t[-1])
+                if self.bcsFer.ek0h>0:
+                    numcoeff = self.bcsFer.mf_div_2pi / self.beta
+                    ferNum += numcoeff * np.log((1.0 + myexp_IR(-1.0 * self.beta * self.bcsFer.ek0h))/
+                                                (1.0 + myexp_IR(-1.0 * self.beta * self.bcsFer.ek0p)))
+                else:
+                    numcoeff = self.bcsFer.mf_div_2pi / self.beta
+                    num_FS = self.bcsFer.mf_div_2pi * (-1.0 * self.bcsFer.ek0h)
+                    num_Smfld = numcoeff * np.log((1.0 + myexp_IR(self.beta * self.bcsFer.ek0h))/
+                                                  (1.0 + myexp_IR(-1.0 * self.beta * self.bcsFer.ek0p)))
+                    ferNum += num_FS + num_Smfld
+
         else:
             ferNum = self.solThr.y[rho_f_idx, -1]
         if self.becShift:
@@ -153,17 +186,18 @@ class BCSAction:
 
 def findMu(targetNum, eb, beta, cutoff, mass, mu_guess=None, use_hint_cache=True):
     mu0 = targetNum * np.pi / mass
-    lo = -1.0 * eb / 2.0 + 1e-7
-    hi = mu0 * 3.0
+    lo = -1.0 * eb / 2.0 + 0.3
+    hi = mu0 * 10
     cache_key = (float(eb), float(cutoff), float(mass), float(targetNum))
     if mu_guess is None and use_hint_cache:
         mu_guess = _bcs_mu_hint.get(cache_key)
 
     def func(mui):
-        return BCSAction(eb, beta, mui, cutoff, mass).FinalNum() - targetNum
+        bcsact = BCSAction(eb, beta, mui, cutoff, mass)
+        return bcsact.FinalNum() - targetNum
 
     def on_bracket_fail(_, __, lft, rht):
-        print(f"{eb:.2f},\t{beta:.2f},\t{lft:.2f},\t{rht:.2f}")
+        print(f"{eb:.2f},\t{beta:.2f},\tvalues:{lft:.2f},\t{rht:.2f},\tmupos:{lo:.2f},\t{hi:.2f},\ttargetNum={targetNum:.2f},")
 
     root = bisect_with_guess(func, lo, hi, xtol=1e-6, mu_guess=mu_guess, on_bracket_fail=on_bracket_fail)
     if use_hint_cache:

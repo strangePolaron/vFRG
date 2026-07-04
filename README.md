@@ -5,6 +5,7 @@ An FRG project focusing on 2D bosons which provides a unified method dealing wit
 ## Table of Contents
 
 - [Installation](#installation)
+- [Cluster (miniconda)](#cluster-miniconda)
 - [Quick Start](#quick-start)
 - [What the Project Computes](#what-the-project-computes)
 - [Architecture](#architecture)
@@ -53,6 +54,41 @@ uv sync
 
 ---
 
+## Cluster (miniconda)
+
+Local development uses **uv**; HPC batch jobs use **miniconda** via `jobscript-cn.sh` (no `uv` on compute nodes).
+
+**One-time setup on the login node:**
+
+```bash
+module load miniforge/24.11-E-L   # miniconda-compatible module on this cluster
+bash setup-miniconda-env.sh
+```
+
+**Submit Tc sweeps from the repo root:**
+
+```bash
+sbatch jobscript-cn.sh           # both plotTc.py and plotTcBEC.py
+sbatch jobscript-cn.sh bcs       # BCS crossover only
+sbatch jobscript-cn.sh bec       # BEC BKT only
+```
+
+Outputs:
+
+| Track | Pickle | Figure |
+|-------|--------|--------|
+| BCS | `Results/bcs-effixed-KToff.pickle` | `Results/bcs-effixed-KToff.png` |
+| BEC | `Results/bec.pickle` | `Results/bec.png` |
+
+**Login-node smoke test** (after `conda activate vfrg-py310`):
+
+```bash
+export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
+python -c "import bcs, numpy, scipy, matplotlib, tqdm"
+```
+
+---
+
 ## Quick Start
 
 After installation, run one of the main pipelines:
@@ -67,8 +103,8 @@ uv run plotTcBEC.py
 
 | Command | Track | Output |
 |---------|-------|--------|
-| `uv run plotTc.py` | BCS–BEC crossover | `Results/bcs-effixed-KToff.pickle` + pcolormesh plot |
-| `uv run plotTcBEC.py` | Pure BEC / BKT | `Results/bec.pickle` + pcolormesh plot |
+| `uv run plotTc.py` | BCS–BEC crossover | `Results/bcs-effixed-KToff.pickle` + `.png` |
+| `uv run plotTcBEC.py` | Pure BEC / BKT | `Results/bec.pickle` + `.png` |
 | `uv run scripts/demo_bcs.py` | BCS | Density map over `(μ, T)` |
 | `uv run scripts/demo_bec.py` | BEC | RG trajectory plot (`ρ`, `A_v`, `A_l`, `y_k`) |
 | `uv run scripts/demo_kt.py` | KT only | Standalone Kosterlitz–Thouless flow |

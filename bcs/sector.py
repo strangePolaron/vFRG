@@ -79,11 +79,14 @@ def compose_sectors(
         dy_accum = dy_sector if dy_accum is None else dy_accum.add_by_key(dy_sector)
     if dy_accum is None:
         raise ValueError("compose_sectors requires at least one sector")
+    #print(f"1:{dy_accum.ylst()}")
     for hook in hooks:
         hook(state, dy_accum)
+    #print(f"2:{dy_accum.ylst()}")
     for sector in sectors:
         #dy_sector = state.zero_like()
         dy_sector = sector.contribute_post(l, dy_accum)
         if dy_sector is not None:
             dy_accum = dy_sector if dy_accum is None else dy_accum.add_by_key(dy_sector)
+    #print(f"3:{dy_accum.ylst()}")
     return dy_accum.ylst()

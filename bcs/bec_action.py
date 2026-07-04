@@ -6,12 +6,14 @@ Do not unify with bcs_action.bareInt, which includes a cutoff-dependent correcti
 """
 
 import numpy as np
-import scipy.integrate as itg
 
+from bcs.ode_integrate import DEFAULT_MAX_ODE_STEPS, solve_rg_ivp  # [ode-max-steps]
 from bcs import quantum
 from bcs.keys import Key, key_index
 from bcs.merge_hooks import kt_hook_bec
 from bcs.mu_root import bisect_with_guess
+from bcs.ode_safe import clamp_bec_state, classify_bec_termination, guard_coupling_positive  # [mu-relax-ode-safe]
+from bcs.ode_safe import TerminationKind  # [mu-relax-ode-safe]
 from bcs.sector import compose_sectors
 from bcs.state import RGState
 
@@ -23,14 +25,15 @@ bareInt = lambda eb, m, cutoff: 1.0 / (
 
 
 class BECAction:
-    def __init__(self, eb2boson0, beta, mu, m=1.0):
+    def __init__(self, eb2boson0, beta, mu, m=1.0, max_ode_steps=None):
         self.KTSwitch = True
         self.beta = beta
         self.lpar = 0.0
         self.mb = m
 
-        self.cutoff = np.sqrt(m * eb2boson0)
-        self.g0 = bareInt(eb2boson0, self.mb, np.sqrt(pow(self.cutoff, 2) - 2. * self.mb * mu))
+        self.cutoff = 10.0 #np.sqrt(m * eb2boson0 - 1e-1)
+        assert (self.mb * eb2boson0> pow(self.cutoff, 2)), "mb*eb should be larger than cutoff^2"
+        self.g0 = bareInt(eb2boson0, self.mb, np.sqrt(pow(self.cutoff, 2)))
 
         self.mub = mu
         self.rho_init = max(self.mub / self.g0, 0)
@@ -50,8 +53,10 @@ class BECAction:
 
         self.terminFunc = quantum.BECterminFunc(self.mb, self.beta, self.rhoidx, self.allidx, self.avvidx)
         self.y0 = self.ydata.ylst()
+        self.step_limit_hit = False  # [ode-max-steps]
         try:
-            self.sol = itg.solve_ivp(
+            # [ode-max-steps]
+            result = solve_rg_ivp(
                 self.eqn,
                 (np.double(0.0), np.double(40.0)),
                 self.y0,
@@ -60,7 +65,10 @@ class BECAction:
                 atol=1e-7,
                 min_step=1e-12,
                 events=self.terminFunc,
+                max_ode_steps=max_ode_steps or DEFAULT_MAX_ODE_STEPS,
             )
+            self.sol = result.sol
+            self.step_limit_hit = result.step_limit_hit
         except ValueError:
             print(f"mu:\t{self.mub},\ty:\t{self.ydata.ylst()}")
 
@@ -78,11 +86,23 @@ class BECAction:
         #    a = input()
         #np.nan_to_num(ylst, nan=0.0, posinf=0.0, neginf=0.0)
 
+        # [mu-relax-ode-safe] clamp rho/avv for event overshoot; all only guarded if non-positive
+        ylst = clamp_bec_state(ylst, (self.rhoidx, self.avvidx))
+        ylst = guard_coupling_positive(ylst, (self.allidx,))
         self.ydata.update(ylst)
         return compose_sectors(self.ydata, l, [self.quantumbec], [kt_hook_bec],)
 
     def FinalRhoSF(self):
-        if self.sol.status == 1 or self.sol.status == -1:
+        # [mu-relax-ode-safe] all-floor stop: SF exhausted, report all as 0; completed: final all
+        kind = classify_bec_termination(self)
+        if kind in (
+            TerminationKind.ALL_FLOOR,
+            TerminationKind.RHO_FLOOR,
+            TerminationKind.AVV_FLOOR,
+            TerminationKind.FAILED,
+        ):
+            return float(0.0)
+        if int(self.sol.status) == -1:
             return float(0.0)
         assert self.ydata.keysUpd is not None, "ydata.keysUpd is not updated"
         return np.nan_to_num((self.sol.y[self.allidx, -1]), nan=0.0, posinf=0.0, neginf=0.0)
@@ -93,16 +113,16 @@ class BECAction:
 
 
 def findMu(targetNum, ebBos, beta, mass, mu_guess=None, use_hint_cache=True):
-    mu0 = ebBos/2.0 - 1e-5 #min(20.0 * targetNum * np.pi / mass, ebBos/2. - 1e-3)
-    lo = ebBos * 0.0002
-    hi = mu0
+    #mu0 = ebBos/2.0 - 1e-7 #min(20.0 * targetNum * np.pi / mass, ebBos/2. - 1e-3)
+    lo = ebBos * 1e-30
+    hi = ebBos*1e-1
     cache_key = (float(ebBos), float(mass), float(targetNum))
     if mu_guess is None and use_hint_cache:
         mu_guess = _bec_mu_hint.get(cache_key)
 
     def func(mui):
         return BECAction(ebBos, beta, mui, mass).FinalNum() - targetNum
-    
+    assert func(lo) * func(hi)<0.0, f"lo:{func(lo)},\thi:{func(hi)}"
     root = bisect_with_guess(func, lo, hi, xtol=1e-5, mu_guess=mu_guess)
     if use_hint_cache:
         _bec_mu_hint[cache_key] = root

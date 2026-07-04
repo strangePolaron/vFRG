@@ -96,7 +96,7 @@ class OuterBCSFermion(RGSector):
         self.muf = mu
         self.mf = mf
         self.efx2mf = 0.0
-        self.kF2 = self.muf * 2.0 * self.mf
+        self.kF2 = max(self.muf * 2.0 * self.mf, 0.0)
         self.mf_div_2pi = self.mf / (2.0 * np.pi)
         self.cutoff2 = pow(cutoff * np.exp(-1.0 * lpar), 2)
         self.beta = beta

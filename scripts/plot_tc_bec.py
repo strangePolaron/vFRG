@@ -26,7 +26,7 @@ from plotTcBEC import eb_row_tasks, ebgrid, betagrid, ori_shape, rhoSF_eb_row
 
 def main():
     tasks = eb_row_tasks()
-    with Pool(12) as p:
+    with Pool(10) as p:
         rows = list(tqdm.tqdm(p.imap(rhoSF_eb_row, tasks), total=len(tasks)))
     rhogrid = np.array(rows).T.reshape(ori_shape)
 
@@ -59,7 +59,12 @@ def main():
     ax.set_xlabel("$\\log(k_n a)$")
     ax.set_ylabel("$k_B T m/k_n^2$")
     ax.set_title("$A_{l,k}=\\rho_s/\\rho_{0,k}$")
-    plt.show()
+    results_dir = Path("Results")
+    results_dir.mkdir(parents=True, exist_ok=True)
+    fig_path = results_dir / "bec.png"
+    fig.savefig(fig_path, dpi=300, bbox_inches="tight")
+    print(f"Saved figure to {fig_path}")
+    # plt.show()
 
 
 if __name__ == "__main__":
