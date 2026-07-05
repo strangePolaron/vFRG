@@ -103,11 +103,25 @@ def becbcsSeparate(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=20.0, mass
     return 0.0
 
 
+def mu_row_tasks(eb=(kF**2) / (mf), cutoff=200.0, mass=mf):
+    return [(float(eb), betalst.copy(), float(mu*eb), cutoff, mass) for mu in mu_div_eb_lst_for_ntot]
+
+
+def ntot_row(task):
+    eb, betas, mu, cut, m = task
+    row = []
+    for beta in betas:
+        bcsobj = bcs.BCSAction(eb, beta, mu, cut, m)
+        row.append(bcsobj.FinalNum())
+    return row
+
+
 eblst = np.exp(np.linspace(np.log(8.0) - 2.0 * np.euler_gamma + 3.0, np.log(8.0) - 2.0 * np.euler_gamma - 4.0, 151)) * (
     (kF**2) / (2.0 * mf)
 )
 betalst = 1.0 / np.linspace(1.0 / 10000.0, 4.02 / 100.0, 151) / ((kF**2) / (2.0 * mf))
 betaMulst = 1.0 / np.arange(1.0 / 200000.0, 5.0 / 10000.0, 2.0 / 10000.0)
+mu_div_eb_lst_for_ntot = np.linspace(-1., 2., len(eblst))
 
 ebgrid, betagrid = np.meshgrid(eblst, betalst)
 ori_shape = ebgrid.shape
@@ -119,11 +133,18 @@ oriMu_shape = ebMugrid.shape
 totMuLen = len(eblst) * len(betaMulst)
 parMuLst = list(zip(ebMugrid.reshape(totMuLen), betaMugrid.reshape(totMuLen)))
 
+Ntotmugrid, Ntotbetagrid = np.meshgrid(mu_div_eb_lst_for_ntot, betalst)
+ntot_ori_shape = Ntotmugrid.shape
+
 if __name__ == "__main__":
-    tc_mu = False 
-    if tc_mu:
-        from scripts.plot_tc import main
-        main()
-    else:
-        from scripts.plot_tc_mu import main
-        main()
+    which_to_calc = "ntot"
+    match which_to_calc:
+        case "tc":
+            from scripts.plot_tc import main
+            #main()
+        case "tc-mu":
+            from scripts.plot_tc_mu import main
+            #main()
+        case "ntot":
+            from scripts.plot_tc_ntot import main
+    main()
