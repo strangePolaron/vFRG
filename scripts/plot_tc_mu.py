@@ -47,7 +47,7 @@ def main():
         dat = pickle.load(f)
 
     mugrid = dat["mui"]
-    mugrid = np.nan_to_num(mugrid, nan=0.0, posinf=0.0, neginf=0.0)/ ((kF**2) / (2.0 * mf))
+    mugrid = np.nan_to_num(mugrid, nan=0.0, posinf=0.0, neginf=0.0)
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams["font.size"] = 20
     plt.rcParams["mathtext.fontset"] = "cm"
@@ -58,7 +58,10 @@ def main():
     ebM = np.max(-1.0 * np.log(ebgrid.reshape(ori_shape) * (mf / (kF**2))) / 2.0 - np.euler_gamma + np.log(2.0))
     ax.set_xticks(np.arange(ebm, ebM+1e-10, 0.5))
 
-    murange = max(abs(np.min(mugrid)), abs(np.max(mugrid)))
+    #mugrid = mugrid / ebgrid.reshape(ori_shape)
+
+    murange = max(abs(np.min(mugrid)), 0.5) #min(max(abs(np.min(mugrid)), abs(np.max(mugrid))), 0.5)
+    #print(murange)
     
     c = ax.pcolormesh(
         -1.0 * np.log(ebgrid.reshape(ori_shape) * (mf / (kF**2))) / 2.0 - np.euler_gamma + np.log(2.0),
@@ -73,7 +76,7 @@ def main():
     cbar.ax.set_yticks([-0.5, 0., 0.5],["-0.5","0 or\nnonSF","$\\geq 0.5$"])
     ax.set_xlabel("$\\log(k_F a)$")
     ax.set_ylabel("$k_B T/E_F$")
-    ax.set_title("$\\mu/E_F$")
+    ax.set_title("$\\mu/\\epsilon_B$")
     results_dir = Path("Results")
     results_dir.mkdir(parents=True, exist_ok=True)
     fig_path = results_dir / "bcs-mu-effixed.png"

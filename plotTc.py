@@ -38,7 +38,10 @@ def _mu_for_SF(eb, beta, mu, targetNum, cutoff, mass):
         return 0.0
     if abs(bcsobj.FinalRhoSF())<1e-8:
         return 0.0
-    return mu
+    rs = mu/eb
+    if rs<-0.5:
+        print(f"eb:{eb},\tbeta:{beta},\tmu:{mu},\tNtot:{bcsobj.FinalNum()},\tSFratio={bcsobj.FinalRhoSF()}")
+    return rs
 
 
 
@@ -48,7 +51,7 @@ def rhoSF(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=50.0, mass=mf):
     return _rho_at_mu(eb, beta, mu, targetNum, cutoff, mass)
 
 
-def eb_row_tasks(targetNum=(kF**2) / (2.0 * np.pi), cutoff=50.0, mass=mf):
+def eb_row_tasks(targetNum=(kF**2) / (2.0 * np.pi), cutoff=200.0, mass=mf):
     return [(float(eb), betalst.copy(), targetNum, cutoff, mass) for eb in eblst]
 
 
@@ -64,7 +67,7 @@ def rhoSF_eb_row(task):
     return row
 
 
-def muiSF(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=20.0, mass=mf):
+def muiSF(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=50.0, mass=mf):
     eb, beta = parpair
     mu = bcs.findMu(targetNum, eb, beta, cutoff, mass)
     bcsobj = bcs.BCSAction(eb, beta, mu, cutoff, mass)
