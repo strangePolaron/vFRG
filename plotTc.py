@@ -28,6 +28,19 @@ def _rho_at_mu(eb, beta, mu, targetNum, cutoff, mass):
         return 0.0
     return bcsobj.FinalRhoSF()
 
+def _mu_for_SF(eb, beta, mu, targetNum, cutoff, mass):
+    bcsobj = bcs.BCSAction(eb, beta, mu, cutoff, mass)
+    if np.abs(np.sqrt(bcsobj.FinalNum() * 2.0 * np.pi) - kF) > 0.05:
+        print(
+            f"eb,\t{eb:.1f},\tbeta,\t{beta:.1f},\tmu\t{mu:.2f},\tkF,\t"
+            f"{np.sqrt(bcsobj.FinalNum() * 2.0 * np.pi):.2f}"
+        )
+        return 0.0
+    if abs(bcsobj.FinalRhoSF())<1e-8:
+        return 0.0
+    return mu
+
+
 
 def rhoSF(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=50.0, mass=mf):
     eb, beta = parpair
@@ -62,6 +75,18 @@ def muiSF(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=20.0, mass=mf):
     return mu
 
 
+def muiSF_eb_row(task):
+    eb, betas, tnum, cut, m = task
+    mu_hint = None
+    mudata = []
+    for beta in betas:
+        mu = bcs.findMu(tnum, eb, float(beta), cut, m, mu_guess=mu_hint)
+        #mu = findMu_relax_bcs(tnum, eb, beta, 50.0, mf, mu_hint)
+        mu_hint = mu
+        mudata.append(_mu_for_SF(eb, float(beta), mu, tnum, cut, m))
+    return mudata
+
+
 def becbcsSeparate(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=20.0, mass=mf):
     eb, beta = parpair
     mu = bcs.findMu(targetNum, eb, beta, cutoff, mass)
@@ -92,6 +117,10 @@ totMuLen = len(eblst) * len(betaMulst)
 parMuLst = list(zip(ebMugrid.reshape(totMuLen), betaMugrid.reshape(totMuLen)))
 
 if __name__ == "__main__":
-    from scripts.plot_tc import main
-
-    main()
+    tc_mu = False 
+    if tc_mu:
+        from scripts.plot_tc import main
+        main()
+    else:
+        from scripts.plot_tc_mu import main
+        main()
