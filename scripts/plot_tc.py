@@ -32,7 +32,7 @@ def main():
 
     dat = {"rhosf": rhogrid, "eb": ebgrid.reshape(ori_shape), "Tc": (1.0 / (betagrid.reshape(ori_shape)))}
     try:
-        with open("Results/bcs-effixed-KToff.pickle", "wb") as f:
+        with open("Results/bcs-effixed.pickle", "wb") as f:
             pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
     except Exception as ex:
         print("Error during pickling object (Possibly unsupported):", ex)
@@ -59,7 +59,7 @@ def main():
     ax.set_title("$A_{l,k}=\\rho_s/\\rho_{0,k}$")
     results_dir = Path("Results")
     results_dir.mkdir(parents=True, exist_ok=True)
-    fig_path = results_dir / "bcs-effixed-KToff.png"
+    fig_path = results_dir / "bcs-effixed.png"
     fig.savefig(fig_path, dpi=300, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
     # plt.show()
