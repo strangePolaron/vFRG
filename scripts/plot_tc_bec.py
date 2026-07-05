@@ -30,7 +30,7 @@ def main():
     if len(sys.argv)==1:
         recalc = True
     else:
-        recalc = not (sys.argv[1] in falseSet)
+        recalc = not (sys.argv[-1] in falseSet)
     if recalc:
         tasks = eb_row_tasks()
         with Pool(10) as p:
