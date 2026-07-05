@@ -14,9 +14,9 @@ import BECna as bec
 import numpy as np
 
 #eblst = np.arange(0.01, 2.5, 0.01)
-eblst = np.exp(np.linspace(np.log(4.0) - 2.0 * np.euler_gamma + 24.0, np.log(4.0) - 2.0 * np.euler_gamma + 8., 51)) 
+eblst = np.exp(np.linspace(np.log(4.0) - 2.0 * np.euler_gamma + 24.0, np.log(4.0) - 2.0 * np.euler_gamma + 8., 151)) 
 
-betalst = 1.0 / np.linspace(1.0 / 10000.0, 15.01 / 100.0, 51)
+betalst = 1.0 / np.linspace(1.0 / 10000.0, 15.01 / 100.0, 151)
 betaMulst = 1.0 / np.arange(1.0 / 10000.0, 1.0 / 40.0, 1.0 / 200.0)
 
 ebgrid, betagrid = np.meshgrid(eblst, betalst)

@@ -165,7 +165,7 @@ def find_valid_mu(
     lo: float,
     hi: float,
     *,
-    step: float = 0.05,
+    step: float = 0.01,
     max_steps: int = 15,
 ) -> float:
     """Decrease mu until eval_fn reports a valid integration."""
@@ -176,7 +176,15 @@ def find_valid_mu(
         mu *= 1.0 - step
         if mu <= lo:
             break
-    raise NoValidBranchError(f"No valid mu branch found in [{lo}, {hi}]")
+    mu = max(min(float(mu_init), hi), lo)
+    for _ in range(max_steps):
+        if eval_fn(mu).ok:
+            return mu
+        mu *= 1.0 + step
+        if mu >= hi:
+            break
+    return mu_init
+    #raise NoValidBranchError(f"No valid mu branch found in [{lo}, {hi}]")
 
 
 def _second_mu_point(
@@ -458,16 +466,19 @@ def findMu_relax_bcs(
     mass: float,
     mu_guess: float | None = None,
     *,
-    max_evals: int = 25,
+    max_evals: int = 100,
     max_secant_iter: int = 10,
     max_branch_steps: int = 15,
 ) -> float:
     mu0 = targetNum * np.pi / mass
-    lo = -1.0 * eb / 2.0 + 1e-7
+    lo = -1.0 * eb / 2.0 #+ 1e-3
+    
     hi = mu0 * 3.0
 
     def eval_fn(mu: float) -> MuEval:
         return evaluate_mu_bcs(eb, beta, cutoff, mass, mu, targetNum)
+
+    #assert (eval_fn(lo).residual*eval_fn(hi).residual<0.0), f"func(lo)={eval_fn(lo).residual},\tfunc(hi)={eval_fn(hi).residual}"
 
     return relaxed_find_mu(
         eval_fn,

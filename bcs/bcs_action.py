@@ -186,7 +186,7 @@ class BCSAction:
 
 def findMu(targetNum, eb, beta, cutoff, mass, mu_guess=None, use_hint_cache=True):
     mu0 = targetNum * np.pi / mass
-    lo = -1.0 * eb / 2.0 + 0.3
+    lo = -1.0 * eb / 2.0 + 1e-7
     hi = mu0 * 10
     cache_key = (float(eb), float(cutoff), float(mass), float(targetNum))
     if mu_guess is None and use_hint_cache:

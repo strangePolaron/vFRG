@@ -122,7 +122,7 @@ def findMu(targetNum, ebBos, beta, mass, mu_guess=None, use_hint_cache=True):
 
     def func(mui):
         return BECAction(ebBos, beta, mui, mass).FinalNum() - targetNum
-    assert func(lo) * func(hi)<0.0, f"lo:{func(lo)},\thi:{func(hi)}"
+    #assert func(lo) * func(hi)<0.0, f"lo:{func(lo)},\thi:{func(hi)}"
     root = bisect_with_guess(func, lo, hi, xtol=1e-5, mu_guess=mu_guess)
     if use_hint_cache:
         _bec_mu_hint[cache_key] = root

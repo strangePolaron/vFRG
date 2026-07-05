@@ -23,19 +23,26 @@ import tqdm
 
 from plotTcBEC import eb_row_tasks, ebgrid, betagrid, ori_shape, rhoSF_eb_row
 
+tcfunc = lambda logka: 2.0 / (15.463 + np.log(2.0 * (np.euler_gamma + np.log(1.0/2.0) - np.log(4.0*np.pi)/2.0 - logka)))
 
 def main():
-    tasks = eb_row_tasks()
-    with Pool(10) as p:
-        rows = list(tqdm.tqdm(p.imap(rhoSF_eb_row, tasks), total=len(tasks)))
-    rhogrid = np.array(rows).T.reshape(ori_shape)
-
-    dat = {"rhosf": rhogrid, "eb": ebgrid.reshape(ori_shape), "Tc": (1.0 / (betagrid.reshape(ori_shape)))}
-    try:
-        with open("Results/bec.pickle", "wb") as f:
-            pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
-    except Exception as ex:
-        print("Error during pickling object (Possibly unsupported):", ex)
+    falseSet = {'', 'False', '0', 'false', 'None', 'none'}
+    if len(sys.argv)==1:
+        recalc = True
+    else:
+        recalc = not (sys.argv[1] in falseSet)
+    if recalc:
+        tasks = eb_row_tasks()
+        with Pool(10) as p:
+            rows = list(tqdm.tqdm(p.imap(rhoSF_eb_row, tasks), total=len(tasks)))
+        rhogrid = np.array(rows).T.reshape(ori_shape)
+        
+        dat = {"rhosf": rhogrid, "eb": ebgrid.reshape(ori_shape), "Tc": (1.0 / (betagrid.reshape(ori_shape)))}
+        try:
+            with open("Results/bec.pickle", "wb") as f:
+                pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
+        except Exception as ex:
+            print("Error during pickling object (Possibly unsupported):", ex)
 
     with open("Results/bec.pickle", "rb") as f:
         dat = pickle.load(f)
@@ -46,6 +53,14 @@ def main():
     plt.rcParams["mathtext.fontset"] = "cm"
     fig, ax = plt.subplots()
     ax.ticklabel_format(style="sci", scilimits=(-2, 2))
+
+    ebm = np.min(-1.0 * np.log(ebgrid.reshape(ori_shape)) / 2.0 - np.euler_gamma + np.log(2.0))
+    ebM = np.max(-1.0 * np.log(ebgrid.reshape(ori_shape)) / 2.0 - np.euler_gamma + np.log(2.0))
+    ax.set_xticks(np.arange(ebm, ebM+1e-10, 2.0))
+    
+    tcintrp = [tcfunc(xi) for xi in np.linspace(ebm, ebM, 101)]
+    ax.plot(np.linspace(ebm, ebM, 101), tcintrp, 'k--')
+    
     c = ax.pcolormesh(
         -1.0 * np.log(ebgrid.reshape(ori_shape)) / 2.0 - np.euler_gamma + np.log(2.0),
         1.0 / (betagrid.reshape(ori_shape)),

@@ -44,8 +44,8 @@ def rhoSF_eb_row(task):
     mu_hint = None
     row = []
     for beta in betas:
-        #mu = bcs.findMu(tnum, eb, float(beta), cut, m, mu_guess=mu_hint)
-        mu = findMu_relax_bcs(tnum, eb, beta, 50.0, mf, mu_hint)
+        mu = bcs.findMu(tnum, eb, float(beta), cut, m, mu_guess=mu_hint)
+        #mu = findMu_relax_bcs(tnum, eb, beta, 50.0, mf, mu_hint)
         mu_hint = mu
         row.append(_rho_at_mu(eb, float(beta), mu, tnum, cut, m))
     return row
@@ -75,10 +75,10 @@ def becbcsSeparate(parpair, targetNum=(kF**2) / (2.0 * np.pi), cutoff=20.0, mass
     return 0.0
 
 
-eblst = np.exp(np.linspace(np.log(8.0) - 2.0 * np.euler_gamma + 3.0, np.log(8.0) - 2.0 * np.euler_gamma - 4.0, 101)) * (
+eblst = np.exp(np.linspace(np.log(8.0) - 2.0 * np.euler_gamma + 3.0, np.log(8.0) - 2.0 * np.euler_gamma - 4.0, 151)) * (
     (kF**2) / (2.0 * mf)
 )
-betalst = 1.0 / np.arange(1.0 / 10000.0, 10.02 / 100.0, 1.0 / 1000.0) / ((kF**2) / (2.0 * mf))
+betalst = 1.0 / np.linspace(1.0 / 10000.0, 4.02 / 100.0, 151) / ((kF**2) / (2.0 * mf))
 betaMulst = 1.0 / np.arange(1.0 / 200000.0, 5.0 / 10000.0, 2.0 / 10000.0)
 
 ebgrid, betagrid = np.meshgrid(eblst, betalst)
