@@ -25,7 +25,7 @@ class labelDict:
                 "h"    : ["$h$", -1, False],
                 "rhoF" : ["$n_F$", -1, False],
                 "nthrm": ["$n_{B,\\text{th}}$", -1, False],
-                "rho"  : ["$\\rho_{0,k}$", -1, False],
+                "rho"  : ["$\\rho_{0,k}/n_{\\text{tot}}$", -1, False],
                 "avv"  : ["$A_{v,k}$", -1, False],
                 "all"  : ["$A_{l,k}$", -1, False],
                 "lutK" : ["$K$", -1, False],
@@ -78,10 +78,11 @@ def plotcurveConcat(solythr, solybec, keythr, keyall):
 
 
 def regis(lbldict: labelDict, noninitkey, initkey, keys_upd):
-    for key in noninitkey:
-        lbldict.setShownLabel(key, keys_upd, False)
-    for key in initkey:  
-        lbldict.setShownLabel(key, keys_upd, True)
+    for key in keys_upd:
+        if key in noninitkey:
+            lbldict.setShownLabel(key, keys_upd, False)
+        if key in initkey:
+            lbldict.setShownLabel(key, keys_upd, True)
 
 
 def plotAll(bcs:BCSAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
@@ -95,13 +96,7 @@ def plotAll(bcs:BCSAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
         keythr = bcs.solThrKeys.copy()
         keybcs = None if bcs.ydata.keysUpd is None else bcs.ydata.keysUpd.copy()
         ythr, ybcs, yall, kthr, kbcs, kall = plotcurveConcat(solyThr, solyBCS, keythr, keybcs)
-    
-        print(bcs.solThrKeys)
-        print(bcs.ydata.keysUpd)
-        print(bcs.FinalNum())
-        print(bcs.FinalRhoSF())
-        print(bcs.becShift)
-
+        
         plt.rcParams["font.family"] = "Times New Roman"
         plt.rcParams["font.size"] = 20
         plt.rcParams["mathtext.fontset"] = "cm"
@@ -111,7 +106,6 @@ def plotAll(bcs:BCSAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
         regis(lbldict, Shownkeylst_noninit, Shownkeylst_init, kthr)
         regis(lbldict, Shownkeylst_noninit, Shownkeylst_init, kbcs)
         regis(lbldict, Shownkeylst_noninit, Shownkeylst_init, kall)
-        #kthr, kbcs, kall = keySeparate(Shownkeylst_noninit + Shownkeylst_init, kthr, kbcs, kall)
 
         curvlst = list()
         lgdlst = list()
@@ -127,6 +121,8 @@ def plotAll(bcs:BCSAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
             if ki in lbldict.labeldict.keys():
                 if lbldict.labeldict[ki][1]!=-1:
                     yi = lbldict.getyi(ybcs, ki)
+                    if ki=="rho":
+                        yi = np.array(yi) * 2.0 * np.pi
                     if yi is not None:
                         ci, = plt.plot(soltBCS, yi)
                         curvlst.append(ci)
@@ -135,10 +131,16 @@ def plotAll(bcs:BCSAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
             if ki in lbldict.labeldict.keys():
                 if lbldict.labeldict[ki][1]!=-1:
                     yi = lbldict.getyi(yall, ki)
-                    if yi is not None:
-                        ci, = plt.plot(soltall, yi)
-                        curvlst.append(ci)
-                        lgdlst.append(lbldict.labeldict[ki][0])
+                    if ki == "eb":
+                        if yi is not None:
+                            ci, = plt.plot(soltThr, yi[:len(soltThr)])
+                            curvlst.append(ci)
+                            lgdlst.append(lbldict.labeldict[ki][0])
+                    else:
+                        if yi is not None:
+                            ci, = plt.plot(soltall, yi)
+                            curvlst.append(ci)
+                            lgdlst.append(lbldict.labeldict[ki][0])
         plt.legend(curvlst, lgdlst)
         plt.show()
     else:
@@ -162,14 +164,17 @@ def main():
     ef = (kF**2) / (2.0 * mass)
     eb = 2.
     cutoff = 200.0
-    beta = 57.0
+    beta = 60.0
     mu = -0.7
 
     mu = findMu(float(1.0/(2.*np.pi)), eb, beta, cutoff, mass, mu)
     print(mu)
     bcs = BCSAction(eb, beta, mu, cutoff, mass)
     print(f"Ntot={bcs.FinalNum()},\tSFratio={bcs.FinalRhoSF()}")
-    plotAll(bcs, ["g","all", "avv","rho","g1"], ["eb"])
+
+    a = np.sqrt((4.0 / np.exp(2.*np.euler_gamma) / eb / mass))
+    print(f"log(kFa)={np.log(kF*a):.4f},\tk_{{B}}T/E_{{F}}={1.0/beta/ef:.4f}")
+    plotAll(bcs, ["all", "avv","rho","g1"], ["eb"])
 
     """
     plt.rcParams["font.family"] = "Times New Roman"

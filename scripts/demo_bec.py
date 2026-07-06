@@ -16,14 +16,12 @@ from typing import List
 import numpy as np
 import sys
 
-import BECna
-
 
 class labelDict:
     def __init__(self):
         self.labeldict = dict({
                 "g"    : ["$g$", -1, False],
-                "rho"  : ["$\\rho_{0,k}$", -1, False],
+                "rho"  : ["$\\rho_{0,k}/\\rho_{0,k=\\infty}$", -1, False],
                 "avv"  : ["$A_{v,k}$", -1, False],
                 "all"  : ["$A_{l,k}$", -1, False],
                 "lutK" : ["$K$", -1, False],
@@ -65,7 +63,7 @@ def plotAll(bec:BECAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
 
     key = None if bec.ydata.keysUpd is None else bec.ydata.keysUpd.copy()
     
-    print(key)
+    #print(key)
     print(bec.FinalNum())
     print(bec.FinalRhoSF())
 
@@ -84,6 +82,8 @@ def plotAll(bec:BECAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
             if ki in lbldict.labeldict.keys():
                 if lbldict.labeldict[ki][1]!=-1:
                     yi = lbldict.getyi(soly, ki)
+                    if ki=="rho":
+                        yi = np.array(yi) * 4.0 * np.pi
                     if yi is not None:
                         ci, = plt.plot(solt, yi)
                         curvlst.append(ci)
@@ -94,16 +94,20 @@ def plotAll(bec:BECAction, Shownkeylst_noninit=[], Shownkeylst_init=[]):
 
 
 def main():
-    ebBos = 300.0
+    ebBos = 10000.0
     mu = 1.2-1e-2
     mass = 1.0
     beta = float(sys.argv[1])#0.242
+    """
+    kn = 1.0
+    """
 
     mu = findMu(float(1.0/(4.0*np.pi)), ebBos, beta, mass)
     print(f"mu={mu}")
     bec = BECAction(ebBos, beta, mu, mass)
-
-    plotAll(bec, ["all", "avv", "g1"], ["g", "rho"])
+    a = np.sqrt((4.0 / np.exp(2.*np.euler_gamma) / ebBos / mass))
+    print(f"log(kFa)={np.log(a):.4f},\tk_{{B}}T/E_{{n}}={mass/beta:.4f}")
+    plotAll(bec, ["all", "avv", "g1", "rho"], ["g"])
 
 if __name__ == "__main__":
     main()
