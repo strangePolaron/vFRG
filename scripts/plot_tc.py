@@ -62,8 +62,8 @@ def main():
         vmax=np.max(rhogrid),
     )
 
-    ax.plot([0.2306],[0.0333],'kX')
-    ax.plot([0.2306],[0.0364],'kP')
+    ax.plot([-0.2306],[0.0333],'kx')
+    ax.plot([-0.2306],[0.0364],'w+')
     
     fig.colorbar(c, ax=ax)
     ax.set_xlabel("$\\log(k_F a)$")
