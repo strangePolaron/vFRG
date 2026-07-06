@@ -34,7 +34,7 @@ class BECAction:
         self.cutoff = 10.0 #np.sqrt(m * eb2boson0 - 1e-1)
         assert (self.mb * eb2boson0> pow(self.cutoff, 2)), "mb*eb should be larger than cutoff^2"
         self.g0 = bareInt(eb2boson0, self.mb, np.sqrt(pow(self.cutoff, 2)))
-
+        self.eb2bosn_vac = eb2boson0
         self.mub = mu
         self.rho_init = max(self.mub / self.g0, 0)
 

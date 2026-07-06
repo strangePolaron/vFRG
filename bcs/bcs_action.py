@@ -42,7 +42,7 @@ class BCSAction:
         self.h = h
         self.gFF0 = bareInt(eb0, self.mf, cutoff)
         self.gFF0 = 1.0 / (1.0 / self.gFF0 + eb0 / pow(self.h, 2))
-
+        self.eb_vac = eb0
         self.ydata = RGState()
         self.bcsFer = fermion.OuterBCSFermion(
             self.ydata, self.mf, self.beta, self.gFF0, self.muf, self.cutoff, self.lpar, self.h
