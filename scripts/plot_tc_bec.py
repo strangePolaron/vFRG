@@ -76,7 +76,7 @@ def main():
     ax.plot([-4.4892],[0.1250],'w+')
 
     ax.set_xlabel("$\\log(k_n a)$")
-    ax.set_ylabel("$k_B T m/k_n^2$")
+    ax.set_ylabel("$mT/k_n^2$")
     ax.set_title("$A_{l,k}=\\rho_s/\\rho_{0,k}$")
     results_dir = Path("Results")
     results_dir.mkdir(parents=True, exist_ok=True)

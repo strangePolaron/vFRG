@@ -73,14 +73,14 @@ def main():
     
     fig.colorbar(c, ax=ax)
     ax.set_xlabel("$\\log(k_F a)$")
-    ax.set_ylabel("$k_B T/E_F$")
+    ax.set_ylabel("$T/E_F$")
     ax.set_title("$A_{l,k}=\\rho_s/\\rho_{0,k}$")
     results_dir = Path("Results")
     results_dir.mkdir(parents=True, exist_ok=True)
     fig_path = results_dir / "bcs-effixed.png"
     fig.savefig(fig_path, dpi=300, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
-    # plt.show()
+    plt.show()
 
 
 if __name__ == "__main__":

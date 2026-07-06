@@ -72,7 +72,7 @@ def main():
     cbar = fig.colorbar(c, ax=ax)
     #cbar.ax.set_yticks([-0.5, 0., 0.5],["$-$0.5","0 or\nnonSF","$\\geq$0.5"])
     ax.set_xlabel("$\\mu/\\epsilon_B$")
-    ax.set_ylabel("$k_B T/\\epsilon_B$")
+    ax.set_ylabel("$T/\\epsilon_B$")
     #ax.set_title("$\\mu/\\epsilon_B$")
     ax.set_title("$n_\\text{tot} / (m \\epsilon_B)$")
     results_dir = Path("Results")

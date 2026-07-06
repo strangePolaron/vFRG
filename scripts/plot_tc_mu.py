@@ -75,7 +75,7 @@ def main():
     cbar = fig.colorbar(c, ax=ax)
     cbar.ax.set_yticks([-0.5, 0., 0.5],["$-$0.5","0 or\nnonSF","$\\geq$0.5"])
     ax.set_xlabel("$\\log(k_F a)$")
-    ax.set_ylabel("$k_B T/E_F$")
+    ax.set_ylabel("$T/E_F$")
     #ax.set_title("$\\mu/\\epsilon_B$")
     ax.set_title("$\\mathrm{e}^{2\\gamma} m\\mu a^2/4$")
     results_dir = Path("Results")
