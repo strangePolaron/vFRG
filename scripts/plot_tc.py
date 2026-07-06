@@ -52,6 +52,12 @@ def main():
     plt.rcParams["mathtext.fontset"] = "cm"
     fig, ax = plt.subplots()
     ax.ticklabel_format(style="sci", scilimits=(-2, 2))
+
+    ebm = np.min(-1.0 * np.log(ebgrid.reshape(ori_shape) * (mf / (kF**2))) / 2.0 - np.euler_gamma + np.log(2.0))
+    ebM = np.max(-1.0 * np.log(ebgrid.reshape(ori_shape) * (mf / (kF**2))) / 2.0 - np.euler_gamma + np.log(2.0))
+    ax.set_xticks(np.arange(ebm, ebM+1e-10, 0.5))
+
+    
     c = ax.pcolormesh(
         -1.0 * np.log(ebgrid.reshape(ori_shape) * (mf / (kF**2))) / 2.0 - np.euler_gamma + np.log(2.0),
         (2.0 * mf / (kF**2)) / (betagrid.reshape(ori_shape)),
