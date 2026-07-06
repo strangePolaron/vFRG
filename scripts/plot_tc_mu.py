@@ -76,8 +76,8 @@ def main():
     cbar.ax.set_yticks([-0.5, 0., 0.5],["$-$0.5","0 or\nnonSF","$\\geq$0.5"])
     ax.set_xlabel("$\\log(k_F a)$")
     ax.set_ylabel("$T/E_F$")
-    #ax.set_title("$\\mu/\\epsilon_B$")
-    ax.set_title("$\\mathrm{e}^{2\\gamma} m\\mu a^2/4$")
+    ax.set_title("$\\mu/\\epsilon_B$")
+    #ax.set_title("$\\mathrm{e}^{2\\gamma} m\\mu a^2/4$")
     results_dir = Path("Results")
     results_dir.mkdir(parents=True, exist_ok=True)
     fig_path = results_dir / "bcs-mu-effixed.png"

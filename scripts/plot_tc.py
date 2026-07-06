@@ -80,7 +80,7 @@ def main():
     fig_path = results_dir / "bcs-effixed.png"
     fig.savefig(fig_path, dpi=300, bbox_inches="tight")
     print(f"Saved figure to {fig_path}")
-    plt.show()
+    #plt.show()
 
 
 if __name__ == "__main__":

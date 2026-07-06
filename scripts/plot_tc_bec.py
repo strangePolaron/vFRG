@@ -23,7 +23,7 @@ import tqdm
 
 from plotTcBEC import eb_row_tasks, ebgrid, betagrid, ori_shape, rhoSF_eb_row
 
-tcfunc = lambda logka: 2.0 / (15.463 + np.log(2.0 * (np.euler_gamma + np.log(1.0/2.0) - np.log(4.0*np.pi)/2.0 - logka)))
+tcfunc = lambda logka: 1.0/2.0 / (np.log((380. / (4.0*np.pi) )* 2.0 * (np.log(2.0) - np.euler_gamma + np.log(4.0*np.pi)/2.0 - logka)))
 
 def main():
     falseSet = {'', 'False', '0', 'false', 'None', 'none'}
