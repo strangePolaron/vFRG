@@ -119,9 +119,9 @@ def ntot_row(task):
 eblst = np.exp(np.linspace(np.log(8.0) - 2.0 * np.euler_gamma + 3.0, np.log(8.0) - 2.0 * np.euler_gamma - 4.0, 151)) * (
     (kF**2) / (2.0 * mf)
 )
-betalst = 1.0 / np.linspace(1.0 / 10000.0, 4.02 / 100.0, 151) / ((kF**2) / (2.0 * mf))
+betalst = 1.0 / np.linspace(1.0 / 10000.0, 4.02 / 100.0, 301) / ((kF**2) / (2.0 * mf))
 betaMulst = 1.0 / np.arange(1.0 / 200000.0, 5.0 / 10000.0, 2.0 / 10000.0)
-mu_div_eb_lst_for_ntot = np.linspace(-1., 2., len(eblst))
+mu_div_eb_lst_for_ntot = np.linspace(-1., 2., 301)
 
 ebgrid, betagrid = np.meshgrid(eblst, betalst)
 ori_shape = ebgrid.shape
@@ -137,7 +137,7 @@ Ntotmugrid, Ntotbetagrid = np.meshgrid(mu_div_eb_lst_for_ntot, betalst)
 ntot_ori_shape = Ntotmugrid.shape
 
 if __name__ == "__main__":
-    which_to_calc = "ntot"
+    which_to_calc = "tc"
     match which_to_calc:
         case "tc":
             from scripts.plot_tc import main

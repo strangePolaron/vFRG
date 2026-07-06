@@ -18,10 +18,11 @@ from bcs.state import RGState
 
 ydatakeysPrompt = ["g", "rho", "avv", "all"]
 
+_xi_div_healingLength = float(1.0)
 
 class QuantumAction(RGSector):
     def __init__(self, prsdata: RGState, m, cutoff, lpar_init0, beta, g0, rho0, KTSwitch=True):
-        iota0 = (cutoff * np.exp(-1.0*lpar_init0) /(np.sqrt(2.0*m*g0*rho0)))
+        iota0 = (cutoff * np.exp(-1.0*lpar_init0) /(np.sqrt(2.0*m*g0*rho0))) * _xi_div_healingLength
         couplings = (
             CouplingSpec("g", g0, Key.G),
             CouplingSpec("rho", rho0, Key.RHO),
@@ -124,7 +125,7 @@ class QuantumAction(RGSector):
         self.updInternalVar()
         if self.KTSwitch:  #and self.ktStart:
             self.ydata.data["lutK"] = self.lutK()
-            self.ydata.data["iota"] = self.healLength() * self.k #/ (2.0 * np.pi)
+            self.ydata.data["iota"] = self.healLength() * self.k * _xi_div_healingLength #/ (2.0 * np.pi)
 
     def lutK(self):
         return self.m / (self.yval("rho") * self.yval("all")) / self.beta
