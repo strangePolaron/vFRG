@@ -25,18 +25,26 @@ from plotTc import eb_row_tasks, kF, mf, ori_shape, ebgrid, betagrid, rhoSF_eb_r
 
 
 def main():
-    tasks = eb_row_tasks()
-    with Pool(10) as p:
-        rows = list(tqdm.tqdm(p.imap(rhoSF_eb_row, tasks), total=len(tasks)))
-    rhogrid = np.array(rows).T.reshape(ori_shape)
+    falseSet = {'', 'False', '0', 'false', 'None', 'none'}
+    if len(sys.argv)==1:
+        recalc = True
+    else:
+        recalc = not (sys.argv[-1] in falseSet)
+    if recalc:
+        tasks = eb_row_tasks()
+        with Pool(10) as p:
+            rows = list(tqdm.tqdm(p.imap(rhoSF_eb_row, tasks), total=len(tasks)))
+        rhogrid = np.array(rows).T.reshape(ori_shape)
+        
+        dat = {"rhosf": rhogrid, "eb": ebgrid.reshape(ori_shape), "Tc": (1.0 / (betagrid.reshape(ori_shape)))}
+        try:
+            with open("Results/bcs-effixed.pickle", "wb") as f:
+                pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
+        except Exception as ex:
+            print("Error during pickling object (Possibly unsupported):", ex)
 
-    dat = {"rhosf": rhogrid, "eb": ebgrid.reshape(ori_shape), "Tc": (1.0 / (betagrid.reshape(ori_shape)))}
-    try:
-        with open("Results/bcs-effixed.pickle", "wb") as f:
-            pickle.dump(dat, f, protocol=pickle.HIGHEST_PROTOCOL)
-    except Exception as ex:
-        print("Error during pickling object (Possibly unsupported):", ex)
-
+    with open("Results/bcs-effixed.pickle", "rb") as f:
+        dat = pickle.load(f)
     rhogrid = dat["rhosf"]
     rhogrid = np.nan_to_num(rhogrid, nan=0.0, posinf=0.0, neginf=0.0)
     plt.rcParams["font.family"] = "Times New Roman"
@@ -53,6 +61,10 @@ def main():
         vmin=np.min(rhogrid),
         vmax=np.max(rhogrid),
     )
+
+    ax.plot([0.2306],[0.0333],'kX')
+    ax.plot([0.2306],[0.0364],'kP')
+    
     fig.colorbar(c, ax=ax)
     ax.set_xlabel("$\\log(k_F a)$")
     ax.set_ylabel("$k_B T/E_F$")
