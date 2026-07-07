@@ -137,7 +137,7 @@ Ntotmugrid, Ntotbetagrid = np.meshgrid(mu_div_eb_lst_for_ntot, betalst)
 ntot_ori_shape = Ntotmugrid.shape
 
 if __name__ == "__main__":
-    which_to_calc = "tc-mu"
+    which_to_calc = "tc"
     match which_to_calc:
         case "tc":
             from scripts.plot_tc import main

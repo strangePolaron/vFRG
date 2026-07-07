@@ -28,7 +28,7 @@ def myexp_IR(x):
         return np.exp(x)
 
 class BCSAction:
-    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=40.0, max_ode_steps=None):
+    def __init__(self, eb0, beta, mu, cutoff, mf=1.0, h=100.0, max_ode_steps=None):
         self.efSwitch = False
         self.KTswitch = True
 
